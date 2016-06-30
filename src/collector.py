@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-06-30T10:55:26cest>
+# Time-stamp: <2016-06-30T12:13:12cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -28,9 +28,11 @@
 
 import argparse
 import logging
+import ConfigParser
 
 from _version import __version__
 
+from pymongo import MongoClient
 
 # LOG SETUP
 logger = logging.getLogger(__name__)
@@ -57,10 +59,29 @@ parser.add_argument('-c', '--config',
                     help='configuration file')
 
 
+def get_meter_db(db_connection):
+    logger.info("Connecting to: %s." % db_connection)
+    mongo = MongoClient(db_connection)
+    logger.debug(mongo.server_info())
+
+    db = mongo.ceilometer
+    meter = db.meter
+    return meter
+
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
     logger.info("Reading configuration file: %s." % cfg_file)
+
+    config = ConfigParser.RawConfigParser()
+    config.read(cfg_file)
+
+    if not config.has_option('db', 'connection'):
+        raise SystemError("No db connection option in '%s'" % cfg_file)
+
+    db_connection = config.get('db', 'connection')
+    meters = get_meter_db(db_connection)
 
 
 if __name__ == "__main__":
