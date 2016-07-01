@@ -5,7 +5,7 @@
 #
 # Filename: store.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-01T10:36:51cest>
+# Time-stamp: <2016-07-01T12:39:41cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -26,7 +26,11 @@
 #
 ######################################################################
 
+import log
+
 import requests
+
+logger = log.get_logger()
 
 
 class Store:
@@ -38,7 +42,7 @@ class Store:
     def _request(self, rest_type, api, json=None):
         f = getattr(requests, rest_type)
         url = "%s/%s" % (self.store_api_url, api)
-        print url, f
+        logger.debug("REST request: %s %s json=%s" % (rest_type, url, json))
         if json:
             return f(url, json)
         return f(url)

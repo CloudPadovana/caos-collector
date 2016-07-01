@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-01T10:37:19cest>
+# Time-stamp: <2016-07-01T12:38:58cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -27,25 +27,18 @@
 ######################################################################
 
 import argparse
-import logging
 import ConfigParser
 
 from _version import __version__
 from store import Store
+import log
 
 from pymongo import MongoClient
 
-# LOG SETUP
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
-
+log.setup_logger()
+logger = log.get_logger()
+logger.info("Logger setup.")
 
 # CLI ARGs
 parser = argparse.ArgumentParser(description='Data collector for CAOS-NG.',
