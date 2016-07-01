@@ -69,18 +69,21 @@ def get_meter_db(db_connection):
     return meter
 
 
+def get_cfg_option(section, option):
+    if not config.has_option(section, option):
+        raise SystemError("No %(section)s/%(option)s option in '%(cfg_file)s'")
+    return config.get(section, option)
+
+config = ConfigParser.RawConfigParser()
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
     logger.info("Reading configuration file: %s." % cfg_file)
-
-    config = ConfigParser.RawConfigParser()
     config.read(cfg_file)
 
-    if not config.has_option('db', 'connection'):
-        raise SystemError("No db connection option in '%s'" % cfg_file)
+    db_connection = get_cfg_option('db', 'connection')
 
-    db_connection = config.get('db', 'connection')
     meters = get_meter_db(db_connection)
 
 
