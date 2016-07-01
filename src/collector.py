@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-06-30T12:13:12cest>
+# Time-stamp: <2016-07-01T10:37:19cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -31,6 +31,7 @@ import logging
 import ConfigParser
 
 from _version import __version__
+from store import Store
 
 from pymongo import MongoClient
 
@@ -76,6 +77,7 @@ def get_cfg_option(section, option):
 
 config = ConfigParser.RawConfigParser()
 
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
@@ -83,7 +85,10 @@ def main():
     config.read(cfg_file)
 
     db_connection = get_cfg_option('db', 'connection')
+    store_api_url = get_cfg_option('store', 'api-url')
 
+    store = Store(store_api_url)
+    projects = store.get('projects')
     meters = get_meter_db(db_connection)
 
 
