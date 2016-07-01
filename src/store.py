@@ -5,7 +5,7 @@
 #
 # Filename: store.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-01T12:39:41cest>
+# Time-stamp: <2016-07-01T16:28:17cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -36,27 +36,65 @@ logger = log.get_logger()
 class Store:
     store_api_url = None
 
+    class Result:
+        def __init__(self, status_code, data):
+            self.status_code = status_code
+            self.data = data
+
+        def ok(self):
+            return (self.status_code == requests.codes.ok)
+
     def __init__(self, store_api_url):
         self.store_api_url = store_api_url
 
-    def _request(self, rest_type, api, json=None):
-        f = getattr(requests, rest_type)
+    def _request(self, rest_type, api, data=None, params=None):
+        fun = getattr(requests, rest_type)
         url = "%s/%s" % (self.store_api_url, api)
-        logger.debug("REST request: %s %s json=%s" % (rest_type, url, json))
-        if json:
-            return f(url, json)
-        return f(url)
+        r = fun(url, json=data, params=params)
+        logger.debug("REST request: %s %s json=%s" % (rest_type, url, data))
+        ret = Store.Result(r.status_code, r.json())
+        logger.debug("REST status: %s json=%s", ret.status_code, ret.data)
+        return ret
 
     def get(self, api):
         r = self._request('get', api)
-        if not r.status_code == requests.codes.ok:
-            return []
-        return r.json()
+        if r.ok():
+            return r.data['data']
+        return []
 
-    def put(self, api, json):
-        r = self._request('put', api, json=json)
-        return r.status_code == requests.codes.ok
+    def put(self, api, data):
+        r = self._request('put', api, data)
+        return r.ok()
 
-    def post(self, api, json):
-        r = self._request('post', api, json=json)
-        return r.status_code == requests.codes.ok
+    def post(self, api, data):
+        r = self._request('post', api, data)
+        return r.ok()
+
+    def projects(self):
+        projects = self.get('projects')
+        return dict((p['id'], p['name']) for p in projects)
+
+    def project(self, id=None):
+        if id:
+            return self.get('projects/%s' % id)
+        return self.projects
+
+    def add_project(self, id, name=""):
+        data = {
+            'project': {
+                'id': id,
+                'name': name
+            }
+        }
+
+        self.post('projects', data)
+
+    def set_project(self, id, name=""):
+        data = {
+            'project': {
+                'id': id,
+                'name': name
+            }
+        }
+
+        self.put('projects/%s' % id, data)

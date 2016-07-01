@@ -1,2 +1,4 @@
 pymongo ~= 3.2
 requests ~= 2.10
+
+python-keystoneclient ~= 3.1

@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-01T12:38:58cest>
+# Time-stamp: <2016-07-01T16:30:49cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -28,12 +28,17 @@
 
 import argparse
 import ConfigParser
+import os
 
 from _version import __version__
 from store import Store
 import log
 
 from pymongo import MongoClient
+from keystoneclient.auth.identity import v3
+from keystoneauth1 import session
+# import keystoneclient.v3.client as keystone_client
+import keystoneclient.v2_0.client as keystone_client
 
 
 log.setup_logger()
@@ -71,6 +76,46 @@ def get_cfg_option(section, option):
 config = ConfigParser.RawConfigParser()
 
 
+def get_os_envs():
+    d = {}
+    d['username'] = os.environ['OS_USERNAME']
+    d['password'] = os.environ['OS_PASSWORD']
+    d['auth_url'] = os.environ['OS_AUTH_URL']
+    d['project_id'] = os.environ['OS_TENANT_ID']
+    d['user_domain_id'] = os.environ['OS_USER_DOMAIN_ID']
+    return d
+
+
+def get_keystone_session():
+    os_envs = get_os_envs()
+    auth = v3.Password(**os_envs)
+    return session.Session(auth=auth, verify=os.environ['OS_CACERT'])
+
+
+def update_projects(keystone_session, store):
+    # get projects from keystone
+    keystone = keystone_client.Client(session=keystone_session)
+
+    logger.debug("Querying projects from keystone...")
+    # keystone_projects = keystone.projects.list()
+    keystone_projects = keystone.tenants.list()
+    keystone_projects = dict((p.id, p.name) for p in keystone_projects)
+
+    # get known projects
+    my_projects = store.projects()
+
+    for id in keystone_projects:
+        name = keystone_projects[id]
+        if id not in my_projects:
+            logger.debug("Adding new project %s (%s)" % (id, name))
+            store.add_project(id, name)
+        elif not my_projects[id] == name:
+            logger.debug("Updating project %s (%s)" % (id, name))
+            store.set_project(id, name)
+
+    return keystone_projects.keys()
+
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
@@ -81,7 +126,10 @@ def main():
     store_api_url = get_cfg_option('store', 'api-url')
 
     store = Store(store_api_url)
-    projects = store.get('projects')
+
+    keystone_session = get_keystone_session()
+    update_projects(keystone_session, store)
+
     meters = get_meter_db(db_connection)
 
 
