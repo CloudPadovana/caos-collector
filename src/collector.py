@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-01T16:30:49cest>
+# Time-stamp: <2016-07-04T09:10:49cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -32,9 +32,9 @@ import os
 
 from _version import __version__
 from store import Store
+from ceilometer import Ceilometer
 import log
 
-from pymongo import MongoClient
 from keystoneclient.auth.identity import v3
 from keystoneauth1 import session
 # import keystoneclient.v3.client as keystone_client
@@ -56,16 +56,6 @@ parser.add_argument('-c', '--config',
                     dest='cfg_file', metavar='FILE',
                     default='collector.conf',
                     help='configuration file')
-
-
-def get_meter_db(db_connection):
-    logger.info("Connecting to: %s." % db_connection)
-    mongo = MongoClient(db_connection)
-    logger.debug(mongo.server_info())
-
-    db = mongo.ceilometer
-    meter = db.meter
-    return meter
 
 
 def get_cfg_option(section, option):
@@ -128,10 +118,13 @@ def main():
     store = Store(store_api_url)
 
     keystone_session = get_keystone_session()
-    update_projects(keystone_session, store)
+    projects = update_projects(keystone_session, store)
 
-    meters = get_meter_db(db_connection)
+    ceilometer = Ceilometer(db_connection)
 
+    for project in projects:
+        resources = ceilometer.find_resources(project, 'cpu')
+        logger.debug("Project %s has %d resources" %(project, len(resources)))
 
 if __name__ == "__main__":
     main()
