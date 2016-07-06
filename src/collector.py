@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-04T09:10:49cest>
+# Time-stamp: <2016-07-06T09:57:47cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -60,7 +60,7 @@ parser.add_argument('-c', '--config',
 
 def get_cfg_option(section, option):
     if not config.has_option(section, option):
-        raise SystemError("No %(section)s/%(option)s option in '%(cfg_file)s'")
+        raise SystemError("No %s/%s option in config file." % (section, option))
     return config.get(section, option)
 
 config = ConfigParser.RawConfigParser()
