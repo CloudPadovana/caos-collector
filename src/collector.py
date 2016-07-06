@@ -66,20 +66,21 @@ def get_cfg_option(section, option):
 config = ConfigParser.RawConfigParser()
 
 
-def get_os_envs():
-    d = {}
-    d['username'] = os.environ['OS_USERNAME']
-    d['password'] = os.environ['OS_PASSWORD']
-    d['auth_url'] = os.environ['OS_AUTH_URL']
-    d['project_id'] = os.environ['OS_TENANT_ID']
-    d['user_domain_id'] = os.environ['OS_USER_DOMAIN_ID']
-    return d
+def get_os_envs(opts):
+    return dict((opt, get_cfg_option("keystone", opt)) for opt in opts)
 
 
 def get_keystone_session():
-    os_envs = get_os_envs()
+    os_envs = get_os_envs([
+        'username',
+        'password',
+        'auth_url',
+        'project_id',
+        'user_domain_id',
+    ])
+
     auth = v3.Password(**os_envs)
-    return session.Session(auth=auth, verify=os.environ['OS_CACERT'])
+    return session.Session(auth=auth, verify=get_cfg_option('keystone', 'cacert'))
 
 
 def update_projects(keystone_session, store):
