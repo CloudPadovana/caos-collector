@@ -5,7 +5,7 @@
 #
 # Filename: store.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-06T10:00:23cest>
+# Time-stamp: <2016-07-07T12:13:37cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -72,7 +72,7 @@ class Store:
 
     def projects(self):
         projects = self.get('projects')
-        return dict((p['project_id'], p['name']) for p in projects)
+        return dict((p['id'], p['name']) for p in projects)
 
     def project(self, id=None):
         if id:
@@ -82,7 +82,7 @@ class Store:
     def add_project(self, id, name=""):
         data = {
             'project': {
-                'project_id': id,
+                'id': id,
                 'name': name
             }
         }
@@ -92,7 +92,7 @@ class Store:
     def set_project(self, id, name=""):
         data = {
             'project': {
-                'project_id': id,
+                'id': id,
                 'name': name
             }
         }
