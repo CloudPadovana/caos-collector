@@ -128,3 +128,30 @@ class Store:
 
         self.put('metrics/%s' % name, data)
 
+    def series(self, id=None):
+        if id:
+            return self.get('series/%s' % id)
+        series = self.get('series')
+        return dict((p['id'], [p['project_id'], p['metric_name'], p['period']]) for p in series)
+
+    def series_by(self, project_id=None, metric_name=None, period=None):
+        params = {}
+        if project_id:
+            params['project_id'] = project_id
+        if metric_name:
+            params['metric_name'] = metric_name
+        if period:
+            params['period'] = period
+
+        return self.get('series', params=params)
+
+    def create_series(self, project_id, metric_name, period):
+        data = {
+            'series': {
+                'project_id': project_id,
+                'metric_name': metric_name,
+                'period': period
+            }
+        }
+
+        return self.post('series', data)

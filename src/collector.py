@@ -141,6 +141,41 @@ def update_metrics(store):
     return enabled_metrics
 
 
+def get_series_cfg():
+    periods = get_cfg_option('periods')
+    periods = dict((p, get_cfg_option('periods', p, 'int')) for p in periods)
+
+    metrics = get_metrics_cfg()
+
+    ret = []
+    for s in config.sections():
+        PREFIX = 'series/'
+        if s.startswith(PREFIX):
+            _, metric_name, period = s.split('/')
+            ret.append({
+                "metric_name": metric_name,
+                "period": periods[period],
+                "ttl": get_cfg_option(s, 'ttl', 'int')})
+    return ret
+
+
+def update_series(projects, metrics, store):
+    series = store.series()
+    enabled_series = get_series_cfg()
+
+    for project_id in projects:
+        for s in enabled_series:
+            metric_name = s['metric_name']
+            period = s['period']
+            if not store.series_by(project_id=project_id,
+                                   metric_name=metric_name,
+                                   period=period):
+                logger.info("Adding new series %s/%d for project %s" % (metric_name, period, project_id))
+                store.create_series(project_id=project_id,
+                                    metric_name=metric_name,
+                                    period=period)
+
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
@@ -156,6 +191,7 @@ def main():
     projects = update_projects(keystone_session, store)
 
     metrics = update_metrics(store)
+    update_series(projects, metrics, store)
     ceilometer = Ceilometer(db_connection)
 
     for project in projects:
