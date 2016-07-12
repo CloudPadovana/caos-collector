@@ -51,13 +51,13 @@ class Store:
         fun = getattr(requests, rest_type)
         url = "%s/%s" % (self.store_api_url, api)
         r = fun(url, json=data, params=params)
-        logger.debug("REST request: %s %s json=%s" % (rest_type, url, data))
+        logger.debug("REST request: %s %s params=%s json=%s" % (rest_type, url, params, data))
         ret = Store.Result(r.status_code, r.json())
         logger.debug("REST status: %s json=%s", ret.status_code, ret.data)
         return ret
 
-    def get(self, api):
-        r = self._request('get', api)
+    def get(self, api, params=None):
+        r = self._request('get', api, params=params)
         if r.ok():
             return r.data['data']
         return []
@@ -98,3 +98,33 @@ class Store:
         }
 
         self.put('projects/%s' % id, data)
+
+    def metrics(self):
+        metrics = self.get('metrics')
+        return dict((p['name'], p['type']) for p in metrics)
+
+    def metric(self, name=None):
+        if name:
+            return self.get('metrics/%s' % name)
+        return self.metrics
+
+    def add_metric(self, name, type=""):
+        data = {
+            'metric': {
+                'name': name,
+                'type': type
+            }
+        }
+
+        self.post('metrics', data)
+
+    def set_metric(self, name, type=""):
+        data = {
+            'metric': {
+                'name': name,
+                'type': type
+            }
+        }
+
+        self.put('metrics/%s' % name, data)
+

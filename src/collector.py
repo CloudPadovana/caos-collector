@@ -118,6 +118,29 @@ def update_projects(keystone_session, store):
     return keystone_projects.keys()
 
 
+def get_metrics_cfg():
+    ret = {}
+    for s in config.sections():
+        PREFIX = 'metric/'
+        if s.startswith(PREFIX):
+            _, name = s.split('/')
+            ret[name] = {
+                "type": get_cfg_option(s, 'type')
+            }
+    return ret
+
+
+def update_metrics(store):
+    metrics = store.metrics()
+    enabled_metrics = get_metrics_cfg()
+
+    for m in enabled_metrics:
+        if m not in metrics:
+            logger.info("Adding new metric %s" % m)
+            store.add_metric(name=m, type=m['type'])
+    return enabled_metrics
+
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
@@ -132,6 +155,7 @@ def main():
     keystone_session = get_keystone_session()
     projects = update_projects(keystone_session, store)
 
+    metrics = update_metrics(store)
     ceilometer = Ceilometer(db_connection)
 
     for project in projects:
