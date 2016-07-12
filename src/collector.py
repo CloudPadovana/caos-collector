@@ -58,10 +58,21 @@ parser.add_argument('-c', '--config',
                     help='configuration file')
 
 
-def get_cfg_option(section, option):
-    if not config.has_option(section, option):
-        raise SystemError("No %s/%s option in config file." % (section, option))
-    return config.get(section, option)
+def get_cfg_option(section, option=None, type=None):
+    if not config.has_section(section):
+        raise SystemError("No [%s] option in config file." % section)
+
+    if option and not config.has_option(section, option):
+        raise SystemError("No [%s]/%s option in config file." % (section, option))
+
+    if not option:
+        return config.options(section)
+
+    if type:
+        fun = getattr(config, "get%s" % type)
+    else:
+        fun = getattr(config, "get")
+    return fun(section, option)
 
 config = ConfigParser.RawConfigParser()
 
