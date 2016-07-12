@@ -28,7 +28,7 @@
 
 import log
 
-from pymongo import MongoClient
+import pymongo
 from bson import SON
 
 
@@ -38,17 +38,17 @@ logger = log.get_logger()
 class Ceilometer:
     def __init__(self, db_connection):
         logger.info("Connecting to: %s." % db_connection)
-        self.mongo = MongoClient(db_connection)
+        self.mongo = pymongo.MongoClient(db_connection)
         logger.debug(self.mongo.server_info())
         self.db = self.mongo.ceilometer
         self.meter_db = self.db.meter
         self.resource_db = self.db.resource
 
-    def find_resources(self, project_id, counter_name):
+    def find_resources(self, project_id, meter):
         query = SON([
             ('project_id', project_id),
             ('source', 'openstack'),
-            ('meter.counter_name', counter_name)
+            ('meter.counter_name', meter)
         ])
 
         projection = {
