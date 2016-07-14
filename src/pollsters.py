@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-14T09:20:21cest>
+# Time-stamp: <2016-07-14T11:25:03cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -35,35 +35,53 @@ import log
 logger = log.get_logger()
 
 
-class Pollster:
+class Pollster(object):
     project_id = None
     metric_name = None
     period = None
     series_id = None
     ceilometer = None
+    store = None
     start = None
     end = None
 
-    def __init__(self, series, ceilometer, start, end):
+    def __init__(self, series, ceilometer, store, start, end):
         self.project_id = series['project_id']
         self.metric_name = series['metric_name']
         self.period = series['period']
         self.series_id = series['id']
         self.ceilometer = ceilometer
+        self.store = store
         self.start = start
         self.end = end
 
     def run(self):
-        raise NotImplemented
+        # FIXME: check if a sample already exist
+        #
+        # We should check here only the last_timestamp field, and use
+        # the following only in case of errors in store_sample
+        s = self.store.samples(series_id=self.series_id,
+                               timestamp=self.end)
+
+        if len(s):
+            logger.debug("Sample already exists, skipping")
+            return
+
+        self.do()
+
+    def store_sample(self, value):
+        ret = self.store.add_sample(series_id=self.series_id,
+                                    timestamp=self.end,
+                                    value=value)
 
 
 class CPUPollster(Pollster):
     _COUNTER_NAME = "cpu"
 
-    def __init__(self, series, ceilometer, start, end):
-        Pollster.__init__(self, series, ceilometer, start, end)
+    def __init__(self, *args, **kwargs):
+        super(self.__class__, self).__init__(*args, **kwargs)
 
-    def run(self):
+    def do(self):
         resources = self.ceilometer.find_resources(project_id=self.project_id,
                                                    meter=self._COUNTER_NAME,
                                                    start=self.start, end=self.end)
@@ -81,6 +99,9 @@ class CPUPollster(Pollster):
                 continue
 
             values.append(v)
+
+        value = sum(values)
+        self.store_sample(value)
 
     def build_query(self, resource_id, timestamp_query):
         return SON([
