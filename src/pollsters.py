@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-14T11:25:03cest>
+# Time-stamp: <2016-07-14T17:57:50cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -65,9 +65,12 @@ class Pollster(object):
 
         if len(s):
             logger.debug("Sample already exists, skipping")
-            return
+        else:
+            self.do()
 
-        self.do()
+        # FIXME: get last_timestamp from apistorage
+        last_timestamp = self.end
+        return last_timestamp
 
     def store_sample(self, value):
         ret = self.store.add_sample(series_id=self.series_id,

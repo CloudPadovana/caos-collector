@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-14T15:09:46cest>
+# Time-stamp: <2016-07-14T17:57:43cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -191,12 +191,93 @@ pollsters = {
 }
 
 
+def collect_real(metric_name, series, ceilometer, store, start, end):
+    logger.info("Collecting from %s to %s", start, end)
+
+    pollster = pollsters[metric_name]
+    pollster_instance = pollster(series=series, ceilometer=ceilometer, store=store, start=start, end=end)
+    last_timestamp = pollster_instance.run()
+    return last_timestamp
+
+
 def report_alive():
     logger.info("Collector is alive")
 
 
-def collect(period_name, period):
+def collect(period_name, period, store, ceilometer, misfire_grace_time):
     logger.info("Starting collection for period %s (%ds)" %(period_name, period))
+
+    # get a keystone session
+    keystone_session = get_keystone_session()
+
+    # update the known projects
+    projects = update_projects(keystone_session, store)
+
+    # update the metrics (this will not reread the config file)
+    metrics = update_metrics(store)
+
+    # update the series (in case a new project has been added)
+    update_series(projects, metrics, store)
+
+
+    metrics = ['cpu',]
+    projects = ['b38a0dab349e42bdbb469274b20a91b4',]
+    for project_id in projects:
+        for metric_name in metrics:
+            series = store.series_by(project_id=project_id,
+                                     metric_name=metric_name,
+                                     period=period)[0]
+            last_timestamp = series['last_timestamp']
+
+            end = datetime.datetime.utcnow().replace(second=0,
+                                                     microsecond=0)
+
+
+            if not last_timestamp:
+                # this happens when the db has no data
+                logger.info("No previous measurements for project %s, metric %s, period %d", project_id, metric_name, period)
+
+                last_timestamp = end - datetime.timedelta(seconds=period)
+                last_timestamp = last_timestamp - datetime.timedelta(seconds=misfire_grace_time)
+
+                # another second to jump to the following case
+                last_timestamp = last_timestamp - datetime.timedelta(seconds=1)
+
+
+            if last_timestamp < end-datetime.timedelta(seconds=(period+misfire_grace_time)):
+                # we don't want to go too much back in history, set a sane starting point
+                logger.info("Going back in history")
+
+                last_timestamp = end - datetime.timedelta(seconds=period)
+                last_timestamp = last_timestamp - datetime.timedelta(seconds=misfire_grace_time)
+
+                if period >= 3600:
+                    # start at midnight
+                    last_timestamp = last_timestamp.replace(hour=0,
+                                                            minute=0)
+                elif period >= 60:
+                    # start at beginning of the hour
+                    last_timestamp = last_timestamp.replace(minute=0)
+
+
+            if last_timestamp < end - datetime.timedelta(seconds=period):
+                # it could go back in history
+                while last_timestamp < end - datetime.timedelta(seconds=period):
+                    tmp_end = last_timestamp + datetime.timedelta(seconds=period)
+                    start = tmp_end - datetime.timedelta(seconds=period)
+            
+                    last_timestamp = collect_real(metric_name=metric_name,
+                                                  series=series,
+                                                  ceilometer=ceilometer,
+                                                  store=store,
+                                                  start=start,
+                                                  end=tmp_end)
+
+
+            elif last_timestamp > end-datetime.timedelta(seconds=period):
+                # the series is already update
+                logger.info("Series %d is uptodate", series['id'])
+                return
 
 
 def main():
@@ -209,14 +290,7 @@ def main():
     store_api_url = get_cfg_option('store', 'api-url')
 
     store = Store(store_api_url)
-
-    keystone_session = get_keystone_session()
-    projects = update_projects(keystone_session, store)
-
-    metrics = update_metrics(store)
-    update_series(projects, metrics, store)
     ceilometer = Ceilometer(db_connection)
-
 
     # configure the scheduler
     periods = get_periods_cfg()
@@ -255,6 +329,7 @@ def main():
                       # trigger (pass None to add the job as paused)
                       next_run_time=datetime.datetime.utcnow())
 
+    misfire_grace_time = get_cfg_option("collector", "misfire_grace_time", "int")
     for name in periods:
         period = periods[name]
         logger.info("Registering collect job for period %s (%ds)" %(name, period))
@@ -268,7 +343,11 @@ def main():
                           name=name,
                           kwargs={
                               "period_name": name,
-                              "period": period},
+                              "period": period,
+                              "store": store,
+                              "ceilometer": ceilometer,
+                              "misfire_grace_time": misfire_grace_time
+                          },
 
                           # seconds after the designated runtime that
                           # the job is still allowed to be run
@@ -300,5 +379,7 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         logger.info('Got SIGTERM! Terminating...')
         scheduler.shutdown(wait=False)
+
+
 if __name__ == "__main__":
     main()
