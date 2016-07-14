@@ -36,14 +36,6 @@ logger = log.get_logger()
 class Store:
     store_api_url = None
 
-    class Result:
-        def __init__(self, status_code, data):
-            self.status_code = status_code
-            self.data = data
-
-        def ok(self):
-            return (self.status_code == requests.codes.ok)
-
     def __init__(self, store_api_url):
         self.store_api_url = store_api_url
 
@@ -52,23 +44,21 @@ class Store:
         url = "%s/%s" % (self.store_api_url, api)
         r = fun(url, json=data, params=params)
         logger.debug("REST request: %s %s params=%s json=%s" % (rest_type, url, params, data))
-        ret = Store.Result(r.status_code, r.json())
-        logger.debug("REST status: %s json=%s", ret.status_code, ret.data)
-        return ret
+        json = r.json()
+        logger.debug("REST status: %s json=%s", r.status_code, json)
+
+        if r.ok and 'data' in json:
+            return json['data']
+        return r.ok
 
     def get(self, api, params=None):
-        r = self._request('get', api, params=params)
-        if r.ok():
-            return r.data['data']
-        return []
+        return self._request('get', api, params=params)
 
     def put(self, api, data):
-        r = self._request('put', api, data)
-        return r.ok()
+        return self.post(api, data, request='put')
 
-    def post(self, api, data):
-        r = self._request('post', api, data)
-        return r.ok()
+    def post(self, api, data, request='post'):
+        return self._request(request, api, data)
 
     def projects(self):
         projects = self.get('projects')
