@@ -5,7 +5,7 @@
 #
 # Filename: store.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-07T12:13:37cest>
+# Time-stamp: <2016-07-14T11:17:48cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -38,6 +38,9 @@ class Store:
 
     def __init__(self, store_api_url):
         self.store_api_url = store_api_url
+
+    def _format_date(self, date):
+        return date.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def _request(self, rest_type, api, data=None, params=None):
         fun = getattr(requests, rest_type)
@@ -145,3 +148,23 @@ class Store:
         }
 
         return self.post('series', data)
+
+    def add_sample(self, series_id, timestamp, value):
+        data = {
+            'sample': {
+                'series_id': series_id,
+                'timestamp': self._format_date(timestamp),
+                'value': value,
+            }
+        }
+
+        return self.post('samples', data)
+
+    def samples(self, series_id=None, timestamp=None):
+        params = {}
+        if series_id:
+            params['series_id'] = series_id
+        if timestamp:
+            params['timestamp'] = self._format_date(timestamp)
+
+        return self.get('samples', params=params)
