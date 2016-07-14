@@ -65,8 +65,8 @@ parser.add_argument('-c', '--config',
 
 
 def get_cfg_option(section, option=None, type=None):
-    if not config.has_section(section):
-        raise SystemError("No [%s] option in config file." % section)
+    if not config.has_section(section) and section != "DEFAULT":
+        raise SystemError("No [%s] section in config file." % section)
 
     if option and not config.has_option(section, option):
         raise SystemError("No [%s]/%s option in config file." % (section, option))
@@ -115,10 +115,10 @@ def update_projects(keystone_session, store):
     for id in keystone_projects:
         name = keystone_projects[id]
         if id not in my_projects:
-            logger.debug("Adding new project %s (%s)" % (id, name))
+            logger.info("Adding new project %s (%s)" % (id, name))
             store.add_project(id, name)
         elif not my_projects[id] == name:
-            logger.debug("Updating project %s (%s)" % (id, name))
+            logger.info("Updating project %s (%s)" % (id, name))
             store.set_project(id, name)
 
     return keystone_projects.keys()
