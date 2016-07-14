@@ -5,7 +5,7 @@
 #
 # Filename: ceilometer.py
 # Created: 2016-07-01T16:49:54+0200
-# Time-stamp: <2016-07-04T09:05:40cest>
+# Time-stamp: <2016-07-14T09:23:34cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -27,6 +27,7 @@
 ######################################################################
 
 import log
+import types
 
 import pymongo
 from bson import SON
@@ -44,11 +45,28 @@ class Ceilometer:
         self.meter_db = self.db.meter
         self.resource_db = self.db.resource
 
-    def find_resources(self, project_id, meter):
+    def find_resources(self, project_id, meter, start, end):
+        """ Find the resources in the given project that:
+        - have a meter named __meter__
+        - have at least one sample between start and end
+        """
+
+        # FIXME: missing data (see CPUPollster)
+        #
+        # Due to the way ceilometer stores information about
+        # resources, in order to be sure to have at least on sample
+        # between start and end a query to the meter_db is necessary
+
         query = SON([
             ('project_id', project_id),
             ('source', 'openstack'),
-            ('meter.counter_name', meter)
+            ('meter.counter_name', meter),
+            ('first_sample_timestamp', {
+                '$lt': end
+            }),
+            ('last_sample_timestamp', {
+                '$gt': start
+            })
         ])
 
         projection = {

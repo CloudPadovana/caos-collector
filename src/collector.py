@@ -176,6 +176,12 @@ def update_series(projects, metrics, store):
                                     period=period)
 
 
+from pollsters import CPUPollster
+pollsters = {
+    'cpu': CPUPollster
+}
+
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
