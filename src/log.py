@@ -5,7 +5,7 @@
 #
 # Filename: log.py
 # Created: 2016-07-01T12:30:34+0200
-# Time-stamp: <2016-07-01T12:42:26cest>
+# Time-stamp: <2016-07-14T14:55:29cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -35,6 +35,18 @@ def get_logger():
 
 def setup_logger():
     logger = get_logger()
+    logger.setLevel(logging.DEBUG)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+
+def setup_apscheduler_logger():
+    logger = logging.getLogger('apscheduler')
     logger.setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler()

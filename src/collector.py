@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-06T09:57:47cest>
+# Time-stamp: <2016-07-14T15:09:46cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -27,8 +27,11 @@
 ######################################################################
 
 import argparse
+import datetime
 import ConfigParser
 import os
+import sys
+import signal
 
 from _version import __version__
 from store import Store
@@ -39,6 +42,9 @@ from keystoneclient.auth.identity import v3
 from keystoneauth1 import session
 # import keystoneclient.v3.client as keystone_client
 import keystoneclient.v2_0.client as keystone_client
+
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor
 
 
 log.setup_logger()
@@ -141,10 +147,13 @@ def update_metrics(store):
     return enabled_metrics
 
 
-def get_series_cfg():
+def get_periods_cfg():
     periods = get_cfg_option('periods')
-    periods = dict((p, get_cfg_option('periods', p, 'int')) for p in periods)
+    return dict((p, get_cfg_option('periods', p, 'int')) for p in periods)
 
+
+def get_series_cfg():
+    periods = get_periods_cfg()
     metrics = get_metrics_cfg()
 
     ret = []
@@ -182,6 +191,14 @@ pollsters = {
 }
 
 
+def report_alive():
+    logger.info("Collector is alive")
+
+
+def collect(period_name, period):
+    logger.info("Starting collection for period %s (%ds)" %(period_name, period))
+
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
@@ -200,9 +217,88 @@ def main():
     update_series(projects, metrics, store)
     ceilometer = Ceilometer(db_connection)
 
-    for project in projects:
-        resources = ceilometer.find_resources(project, 'cpu')
-        logger.debug("Project %s has %d resources" %(project, len(resources)))
 
+    # configure the scheduler
+    periods = get_periods_cfg()
+
+    log.setup_apscheduler_logger()
+    scheduler = BlockingScheduler(
+        timezone="utc",
+        executors={
+            'default': ThreadPoolExecutor(1)})
+
+    # the special alive job
+    report_alive_period = get_cfg_option("scheduler", "report_alive_period", 'int')
+    logger.info("Registering report_alive job every %ds " % report_alive_period)
+    scheduler.add_job(func=report_alive,
+
+                      # trigger that determines when func is called
+                      trigger='interval',
+                      seconds=report_alive_period,
+
+                      name="report_alive",
+
+                      # seconds after the designated runtime that
+                      # the job is still allowed to be run
+                      misfire_grace_time=int(round(report_alive_period/10)),
+
+                      # run once instead of many times if the
+                      # scheduler determines that the job should
+                      # be run more than once in succession
+                      coalesce=True,
+
+                      # maximum number of concurrently running
+                      # instances allowed for this job
+                      max_instances=1,
+
+                      # when to first run the job, regardless of the
+                      # trigger (pass None to add the job as paused)
+                      next_run_time=datetime.datetime.utcnow())
+
+    for name in periods:
+        period = periods[name]
+        logger.info("Registering collect job for period %s (%ds)" %(name, period))
+
+        scheduler.add_job(func=collect,
+
+                          # trigger that determines when func is called
+                          trigger='interval',
+                          seconds=period,
+
+                          name=name,
+                          kwargs={
+                              "period_name": name,
+                              "period": period},
+
+                          # seconds after the designated runtime that
+                          # the job is still allowed to be run
+                          misfire_grace_time=int(round(period/10)),
+
+                          # run once instead of many times if the
+                          # scheduler determines that the job should
+                          # be run more than once in succession
+                          coalesce=True,
+
+                          # maximum number of concurrently running
+                          # instances allowed for this job
+                          max_instances=1,
+
+                          # when to first run the job, regardless of
+                          # the trigger (pass None to add the job as
+                          # paused)
+                          next_run_time=datetime.datetime.utcnow())
+
+    def sigterm_handler(_signo, _stack_frame):
+        # Raises SystemExit(0):
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
+    # this is blocking
+    try:
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        logger.info('Got SIGTERM! Terminating...')
+        scheduler.shutdown(wait=False)
 if __name__ == "__main__":
     main()
