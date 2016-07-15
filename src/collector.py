@@ -143,7 +143,7 @@ def update_metrics(store):
     for m in enabled_metrics:
         if m not in metrics:
             logger.info("Adding new metric %s" % m)
-            store.add_metric(name=m, type=m['type'])
+            store.add_metric(name=m, type=enabled_metrics[m]['type'])
     return enabled_metrics
 
 
