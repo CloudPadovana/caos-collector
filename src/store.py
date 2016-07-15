@@ -26,9 +26,11 @@
 #
 ######################################################################
 
+import requests
+import datetime
+
 import log
 
-import requests
 
 logger = log.get_logger()
 
@@ -41,6 +43,9 @@ class Store:
 
     def _format_date(self, date):
         return date.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def _parse_date(self, date):
+        return datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
 
     def _request(self, rest_type, api, data=None, params=None):
         fun = getattr(requests, rest_type)
@@ -121,13 +126,23 @@ class Store:
 
         self.put('metrics/%s' % name, data)
 
-    def series(self, id=None):
-        if id:
-            return self.get('series/%s' % id)
-        series = self.get('series')
-        return dict((p['id'], [p['project_id'], p['metric_name'], p['period']]) for p in series)
+    def _process_series(self, series):
+        if not type(series) is list:
+            series = [series, ]
 
-    def series_by(self, project_id=None, metric_name=None, period=None):
+        ret = []
+        for s in series:
+            i = dict((p, s[p]) for p in s)
+            if i['last_timestamp']:
+                i['last_timestamp'] = self._parse_date(i['last_timestamp'])
+            ret.append(i)
+        return ret
+
+    def series(self, id=None, project_id=None, metric_name=None, period=None):
+        if id:
+            r = self.get('series/%s' % id)
+            return self._process_series(r)
+
         params = {}
         if project_id:
             params['project_id'] = project_id
@@ -136,7 +151,8 @@ class Store:
         if period:
             params['period'] = period
 
-        return self.get('series', params=params)
+        r = self.get('series', params=params)
+        return self._process_series(r)
 
     def create_series(self, project_id, metric_name, period):
         data = {

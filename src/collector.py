@@ -176,9 +176,9 @@ def update_series(projects, metrics, store):
         for s in enabled_series:
             metric_name = s['metric_name']
             period = s['period']
-            if not store.series_by(project_id=project_id,
-                                   metric_name=metric_name,
-                                   period=period):
+            if not store.series(project_id=project_id,
+                                metric_name=metric_name,
+                                period=period):
                 logger.info("Adding new series %s/%d for project %s" % (metric_name, period, project_id))
                 store.create_series(project_id=project_id,
                                     metric_name=metric_name,
@@ -224,10 +224,9 @@ def collect(period_name, period, store, ceilometer, misfire_grace_time):
     projects = ['b38a0dab349e42bdbb469274b20a91b4',]
     for project_id in projects:
         for metric_name in metrics:
-            series = store.series_by(project_id=project_id,
-                                     metric_name=metric_name,
-                                     period=period)[0]
-            last_timestamp = series['last_timestamp']
+            series = store.series(project_id=project_id,
+                                  metric_name=metric_name,
+                                  period=period)[0]
 
             end = datetime.datetime.utcnow().replace(second=0,
                                                      microsecond=0)
