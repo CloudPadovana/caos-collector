@@ -5,7 +5,7 @@
 #
 # Filename: store.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-14T11:17:48cest>
+# Time-stamp: <2016-07-15T18:04:09cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -164,6 +164,14 @@ class Store:
         }
 
         return self.post('series', data)
+
+    def series_grid(self, series_id, start_date=None):
+        params = {}
+        if start_date:
+            params['start_date'] = self._format_date(start_date)
+
+        r = self.get('series/%d/grid' % series_id, params=params)['grid']
+        return list(self._parse_date(v) for v in r)
 
     def add_sample(self, series_id, timestamp, value):
         data = {
