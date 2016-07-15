@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-14T17:57:43cest>
+# Time-stamp: <2016-07-15T18:04:32cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -228,52 +228,42 @@ def collect(period_name, period, store, ceilometer, misfire_grace_time):
                                   metric_name=metric_name,
                                   period=period)[0]
 
-            end = datetime.datetime.utcnow().replace(second=0,
-                                                     microsecond=0)
+            last_timestamp = series['last_timestamp']
+            end = datetime.datetime.utcnow()
 
 
             if not last_timestamp:
-                # this happens when the db has no data
+                # this happens when the series has no data
                 logger.info("No previous measurements for project %s, metric %s, period %d", project_id, metric_name, period)
 
-                last_timestamp = end - datetime.timedelta(seconds=period)
-                last_timestamp = last_timestamp - datetime.timedelta(seconds=misfire_grace_time)
-
-                # another second to jump to the following case
-                last_timestamp = last_timestamp - datetime.timedelta(seconds=1)
+                # set to epoch
+                last_timestamp = datetime.datetime(year=1970, month=1, day=1, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
 
-            if last_timestamp < end-datetime.timedelta(seconds=(period+misfire_grace_time)):
+            if last_timestamp < end-datetime.timedelta(seconds=misfire_grace_time):
                 # we don't want to go too much back in history, set a sane starting point
                 logger.info("Going back in history")
 
-                last_timestamp = end - datetime.timedelta(seconds=period)
-                last_timestamp = last_timestamp - datetime.timedelta(seconds=misfire_grace_time)
-
-                if period >= 3600:
-                    # start at midnight
-                    last_timestamp = last_timestamp.replace(hour=0,
-                                                            minute=0)
-                elif period >= 60:
-                    # start at beginning of the hour
-                    last_timestamp = last_timestamp.replace(minute=0)
+                last_timestamp = end - datetime.timedelta(seconds=misfire_grace_time)
 
 
             if last_timestamp < end - datetime.timedelta(seconds=period):
                 # it could go back in history
-                while last_timestamp < end - datetime.timedelta(seconds=period):
-                    tmp_end = last_timestamp + datetime.timedelta(seconds=period)
-                    start = tmp_end - datetime.timedelta(seconds=period)
-            
+                time_grid = store.series_grid(series_id=series['id'], start_date=last_timestamp)
+
+                for ts in time_grid:
+                    end = ts
+                    start = ts - datetime.timedelta(seconds=period)
+
                     last_timestamp = collect_real(metric_name=metric_name,
                                                   series=series,
                                                   ceilometer=ceilometer,
                                                   store=store,
                                                   start=start,
-                                                  end=tmp_end)
+                                                  end=end)
 
 
-            elif last_timestamp > end-datetime.timedelta(seconds=period):
+            else:
                 # the series is already update
                 logger.info("Series %d is uptodate", series['id'])
                 return
