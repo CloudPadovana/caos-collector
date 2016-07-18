@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-14T17:57:50cest>
+# Time-stamp: <2016-07-18T16:18:54cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -93,7 +93,7 @@ class CPUPollster(Pollster):
         values = []
         for resource_id in resources:
             logger.debug("Aggregating %s for resource %s" % (self.metric_name, resource_id))
-            v = self.aggregated_value(resource_id=resource_id,
+            v = self.aggregate_values(resource_id=resource_id,
                                       start=self.start,
                                       end=self.end,
                                       key='counter_volume')
@@ -115,16 +115,69 @@ class CPUPollster(Pollster):
             ('source', 'openstack')
         ])
 
-    def interpolate_value(self, resource_id, timestamp, key):
-        projection = {'timestamp': 1, key: 1}
+    def interpolate_value(self, r1, r2, timestamp, key):
+        t1 = r1['timestamp']
+        v1 = r1[key]
 
-        timestamp_query = {'$lte': timestamp}
+        t2 = r2['timestamp']
+        v2 = r2[key]
+
+        t = timestamp
+        dv = v2-v1
+        dt = (t2-t1).total_seconds()
+        v = v1 + dv/dt*((t-t1).total_seconds())
+        return v
+    def correct_monotonicity(self, items, key):
+        # From the information we have, we just check if some value is
+        # less than its predecessor. In this case we add a delta (also
+        # to all the following values).
+
+        delta = 0
+
+        i0 = items[0]
+        v0 = i0[key]
+        for i in items[1:]:
+            v = i[key]
+            if v < v0:
+                logger.debug("Correcting monotonicity: %s, %d < %s, %d",i ,v, i0, v0)
+                delta += abs(v-v0)
+
+                # all the subsequent items will get the same correction
+                items[0][key] = v + delta
+            i0 = i
+            v0 = v
+        return items
+
+    def aggregate_values(self, resource_id, start, end, key):
+        # To capture a proper value for CPU time, we need to query the
+        # values between time 'start' (exclusive) and 'end'
+        # (inclusive). We also need to capture the two points at the
+        # edges to interpolate according to our period.
+        #
+        # Moreover, due to bug
+        # https://bugs.launchpad.net/ceilometer/+bug/1417949, caused
+        # by libvirt resetting the cputime on instance rebuild, we
+        # also need to correct the monotonicity of the samples.
+
+        projection = {'timestamp': 1,
+                      key: 1,
+                      'resource_metadata.cpu_number': 1}
+
+        # left edge
+        timestamp_query = {'$lte': start}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
         r1 = self.ceilometer.meter_db.find(query, projection).sort('timestamp', DESCENDING).limit(1)
 
-        timestamp_query = {'$gt': timestamp}
+        # data
+        timestamp_query = {'$gt': start,
+                           '$lte': end}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r2 = self.ceilometer.meter_db.find(query, projection).sort('timestamp', ASCENDING).limit(1)
+        r2 = self.ceilometer.meter_db.find(query, projection).sort('timestamp', ASCENDING)
+
+        # right edge
+        timestamp_query = {'$gt': end}
+        query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
+        r3 = self.ceilometer.meter_db.find(query, projection).sort('timestamp', ASCENDING).limit(1)
 
         # FIXME: missing data
         #
@@ -138,27 +191,17 @@ class CPUPollster(Pollster):
         #   - meter data is missing (e.g. ceilometer has been stopped)
         #
         # For the moment, we just return None
-        if not r1.count(True) or not r2.count(True):
+        if not r1.count(with_limit_and_skip=True) or not r3.count(with_limit_and_skip=True):
             return None
 
-        t1 = r1[0]['timestamp']
-        v1 = r1[0][key]
+        r = []
+        r.append(r1[0])
+        r.extend(list(r2))
+        r.append(r3[0])
 
-        t2 = r2[0]['timestamp']
-        v2 = r2[0][key]
+        r = self.correct_monotonicity(r, key=key)
 
-        t = timestamp
-        dv = v2-v1
-        dt = (t2-t1).total_seconds()
-        v = v1 + dv/dt*((t-t1).total_seconds())
-        return v
+        v1 = self.interpolate_value(r[0], r[1], timestamp=start, key=key)
+        v2 = self.interpolate_value(r[-2], r[-1], timestamp=end, key=key)
 
-    def aggregated_value(self, resource_id, start, end, key):
-        v1 = self.interpolate_value(resource_id=resource_id, timestamp=start, key=key)
-        v2 = self.interpolate_value(resource_id=resource_id, timestamp=end, key=key)
-
-        # FIXME: missing data (see interpolate_value)
-        if not v1 or not v2:
-            return None
-
-        return v2-v1
+        return (v2-v1)/1e9
