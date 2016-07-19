@@ -186,6 +186,16 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
             last_timestamp = series['last_timestamp']
             end = datetime.datetime.utcnow()
 
+            if single_shot:
+                end = single_shot
+                start = end - datetime.timedelta(seconds=period)
+
+                last_timestamp = collect_real(metric_name=metric_name,
+                                              series=series,
+                                              start=start,
+                                              end=end,
+                                              force=force)
+                return
 
             if not last_timestamp:
                 # this happens when the series has no data
@@ -319,6 +329,20 @@ def main():
     single_shot = args.single_shot
     if single_shot:
         logger.info("SINGLE SHOT %s", single_shot)
+
+        misfire_grace_time = cfg.get("collector", "misfire_grace_time", "int")
+        for name in periods:
+            period = periods[name]
+            kwargs={
+                "period_name": name,
+                "period": period,
+                "misfire_grace_time": misfire_grace_time,
+                "force": force,
+                "single_shot": utils.parse_date(single_shot)
+            }
+
+            collect(**kwargs)
+
         return
 
     scheduler = setup_scheduler(periods=periods, force=force)
