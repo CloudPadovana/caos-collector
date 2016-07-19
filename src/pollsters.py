@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-18T16:18:54cest>
+# Time-stamp: <2016-07-19T16:32:30cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -30,6 +30,7 @@ from pymongo import ASCENDING, DESCENDING
 from bson import SON
 
 import log
+import apistorage
 
 
 logger = log.get_logger()
@@ -41,17 +42,15 @@ class Pollster(object):
     period = None
     series_id = None
     ceilometer = None
-    store = None
     start = None
     end = None
 
-    def __init__(self, series, ceilometer, store, start, end):
+    def __init__(self, series, ceilometer, start, end):
         self.project_id = series['project_id']
         self.metric_name = series['metric_name']
         self.period = series['period']
         self.series_id = series['id']
         self.ceilometer = ceilometer
-        self.store = store
         self.start = start
         self.end = end
 
@@ -60,8 +59,8 @@ class Pollster(object):
         #
         # We should check here only the last_timestamp field, and use
         # the following only in case of errors in store_sample
-        s = self.store.samples(series_id=self.series_id,
-                               timestamp=self.end)
+        s = apistorage.sample(series_id=self.series_id,
+                              timestamp=self.end)
 
         if len(s):
             logger.debug("Sample already exists, skipping")
@@ -73,7 +72,7 @@ class Pollster(object):
         return last_timestamp
 
     def store_sample(self, value):
-        ret = self.store.add_sample(series_id=self.series_id,
+        ret = apistorage.add_sample(series_id=self.series_id,
                                     timestamp=self.end,
                                     value=value)
 

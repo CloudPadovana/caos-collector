@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-19T15:22:54cest>
+# Time-stamp: <2016-07-19T16:33:23cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -33,7 +33,7 @@ import sys
 import signal
 
 from _version import __version__
-from store import Store
+import apistorage
 from ceilometer import Ceilometer
 import log
 import utils
@@ -84,7 +84,7 @@ def get_keystone_session():
     return session.Session(auth=auth, verify=cfg.get('keystone', 'cacert'))
 
 
-def update_projects(keystone_session, store):
+def update_projects(keystone_session):
     # get projects from keystone
     keystone = keystone_client.Client(session=keystone_session)
 
@@ -94,46 +94,46 @@ def update_projects(keystone_session, store):
     keystone_projects = dict((p.id, p.name) for p in keystone_projects)
 
     # get known projects
-    my_projects = store.projects()
+    my_projects = apistorage.projects()
 
     for id in keystone_projects:
         name = keystone_projects[id]
         if id not in my_projects:
             logger.info("Adding new project %s (%s)" % (id, name))
-            store.add_project(id, name)
+            apistorage.add_project(id, name)
         elif not my_projects[id] == name:
             logger.info("Updating project %s (%s)" % (id, name))
-            store.set_project(id, name)
+            apistorage.set_project(id, name)
 
     return keystone_projects.keys()
 
 
-def update_metrics(store):
-    metrics = store.metrics()
+def update_metrics():
+    metrics = apistorage.metrics()
     enabled_metrics = cfg.get_metrics()
 
     for m in enabled_metrics:
         if m not in metrics:
             logger.info("Adding new metric %s" % m)
-            store.add_metric(name=m, type=enabled_metrics[m]['type'])
+            apistorage.add_metric(name=m, type=enabled_metrics[m]['type'])
     return enabled_metrics
 
 
-def update_series(projects, metrics, store):
-    series = store.series()
+def update_series(projects, metrics):
+    series = apistorage.series()
     enabled_series = cfg.get_series()
 
     for project_id in projects:
         for s in enabled_series:
             metric_name = s['metric_name']
             period = s['period']
-            if not store.series(project_id=project_id,
-                                metric_name=metric_name,
-                                period=period):
+            if not apistorage.series(project_id=project_id,
+                                     metric_name=metric_name,
+                                     period=period):
                 logger.info("Adding new series %s/%d for project %s" % (metric_name, period, project_id))
-                store.create_series(project_id=project_id,
-                                    metric_name=metric_name,
-                                    period=period)
+                apistorage.create_series(project_id=project_id,
+                                         metric_name=metric_name,
+                                         period=period)
 
 
 from pollsters import CPUPollster
@@ -142,11 +142,11 @@ pollsters = {
 }
 
 
-def collect_real(metric_name, series, ceilometer, store, start, end):
+def collect_real(metric_name, series, ceilometer, start, end):
     logger.info("Collecting from %s to %s", start, end)
 
     pollster = pollsters[metric_name]
-    pollster_instance = pollster(series=series, ceilometer=ceilometer, store=store, start=start, end=end)
+    pollster_instance = pollster(series=series, ceilometer=ceilometer, start=start, end=end)
     last_timestamp = pollster_instance.run()
     return last_timestamp
 
@@ -155,29 +155,28 @@ def report_alive():
     logger.info("Collector is alive")
 
 
-def collect(period_name, period, store, ceilometer, misfire_grace_time):
+def collect(period_name, period, ceilometer, misfire_grace_time, single_shot=None):
     logger.info("Starting collection for period %s (%ds)" %(period_name, period))
 
     # get a keystone session
     keystone_session = get_keystone_session()
 
     # update the known projects
-    projects = update_projects(keystone_session, store)
+    projects = update_projects(keystone_session)
 
     # update the metrics (this will not reread the config file)
-    metrics = update_metrics(store)
+    metrics = update_metrics()
 
     # update the series (in case a new project has been added)
-    update_series(projects, metrics, store)
-
+    update_series(projects, metrics)
 
     metrics = ['cpu',]
     projects = ['b38a0dab349e42bdbb469274b20a91b4',]
     for project_id in projects:
         for metric_name in metrics:
-            series = store.series(project_id=project_id,
-                                  metric_name=metric_name,
-                                  period=period)[0]
+            series = apistorage.series(project_id=project_id,
+                                       metric_name=metric_name,
+                                       period=period)[0]
 
             last_timestamp = series['last_timestamp']
             end = datetime.datetime.utcnow()
@@ -200,7 +199,8 @@ def collect(period_name, period, store, ceilometer, misfire_grace_time):
 
             if last_timestamp < end - datetime.timedelta(seconds=period):
                 # it could go back in history
-                time_grid = store.series_grid(series_id=series['id'], start_date=last_timestamp)
+                time_grid = apistorage.series_grid(series_id=series['id'],
+                                                   start_date=last_timestamp)
 
                 for ts in time_grid:
                     end = ts
@@ -209,7 +209,6 @@ def collect(period_name, period, store, ceilometer, misfire_grace_time):
                     last_timestamp = collect_real(metric_name=metric_name,
                                                   series=series,
                                                   ceilometer=ceilometer,
-                                                  store=store,
                                                   start=start,
                                                   end=end)
 
@@ -220,7 +219,7 @@ def collect(period_name, period, store, ceilometer, misfire_grace_time):
                 return
 
 
-def setup_scheduler(periods, store, ceilometer):
+def setup_scheduler(periods, ceilometer):
     log.setup_apscheduler_logger()
     scheduler = BlockingScheduler(
         timezone="utc",
@@ -270,7 +269,6 @@ def setup_scheduler(periods, store, ceilometer):
                           kwargs={
                               "period_name": name,
                               "period": period,
-                              "store": store,
                               "ceilometer": ceilometer,
                               "misfire_grace_time": misfire_grace_time
                           },
@@ -304,7 +302,7 @@ def main():
     db_connection = cfg.get('db', 'connection')
     store_api_url = cfg.get('store', 'api-url')
 
-    store = Store(store_api_url)
+    apistorage.initialize(store_api_url)
     ceilometer = Ceilometer(db_connection)
 
     # configure the scheduler
@@ -316,7 +314,6 @@ def main():
         return
 
     scheduler = setup_scheduler(periods=periods,
-                                store=store,
                                 ceilometer=ceilometer)
     def sigterm_handler(_signo, _stack_frame):
         # Raises SystemExit(0):
