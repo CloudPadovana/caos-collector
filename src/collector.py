@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-19T13:09:31cest>
+# Time-stamp: <2016-07-19T15:22:54cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -28,7 +28,6 @@
 
 import argparse
 import datetime
-import ConfigParser
 import os
 import sys
 import signal
@@ -38,6 +37,7 @@ from store import Store
 from ceilometer import Ceilometer
 import log
 import utils
+import cfg
 
 from keystoneclient.auth.identity import v3
 from keystoneauth1 import session
@@ -71,31 +71,8 @@ parser.add_argument('-s', '--single-shot',
                     help='Perform a single shot collection')
 
 
-def get_cfg_option(section, option=None, type=None):
-    if not config.has_section(section) and section != "DEFAULT":
-        raise SystemError("No [%s] section in config file." % section)
-
-    if option and not config.has_option(section, option):
-        raise SystemError("No [%s]/%s option in config file." % (section, option))
-
-    if not option:
-        return config.options(section)
-
-    if type:
-        fun = getattr(config, "get%s" % type)
-    else:
-        fun = getattr(config, "get")
-    return fun(section, option)
-
-config = ConfigParser.RawConfigParser()
-
-
-def get_os_envs(opts):
-    return dict((opt, get_cfg_option("keystone", opt)) for opt in opts)
-
-
 def get_keystone_session():
-    os_envs = get_os_envs([
+    os_envs = cfg.get_os_envs([
         'username',
         'password',
         'auth_url',
@@ -104,7 +81,7 @@ def get_keystone_session():
     ])
 
     auth = v3.Password(**os_envs)
-    return session.Session(auth=auth, verify=get_cfg_option('keystone', 'cacert'))
+    return session.Session(auth=auth, verify=cfg.get('keystone', 'cacert'))
 
 
 def update_projects(keystone_session, store):
@@ -131,21 +108,9 @@ def update_projects(keystone_session, store):
     return keystone_projects.keys()
 
 
-def get_metrics_cfg():
-    ret = {}
-    for s in config.sections():
-        PREFIX = 'metric/'
-        if s.startswith(PREFIX):
-            _, name = s.split('/')
-            ret[name] = {
-                "type": get_cfg_option(s, 'type')
-            }
-    return ret
-
-
 def update_metrics(store):
     metrics = store.metrics()
-    enabled_metrics = get_metrics_cfg()
+    enabled_metrics = cfg.get_metrics()
 
     for m in enabled_metrics:
         if m not in metrics:
@@ -154,30 +119,9 @@ def update_metrics(store):
     return enabled_metrics
 
 
-def get_periods_cfg():
-    periods = get_cfg_option('periods')
-    return dict((p, get_cfg_option('periods', p, 'int')) for p in periods)
-
-
-def get_series_cfg():
-    periods = get_periods_cfg()
-    metrics = get_metrics_cfg()
-
-    ret = []
-    for s in config.sections():
-        PREFIX = 'series/'
-        if s.startswith(PREFIX):
-            _, metric_name, period = s.split('/')
-            ret.append({
-                "metric_name": metric_name,
-                "period": periods[period],
-                "ttl": get_cfg_option(s, 'ttl', 'int')})
-    return ret
-
-
 def update_series(projects, metrics, store):
     series = store.series()
-    enabled_series = get_series_cfg()
+    enabled_series = cfg.get_series()
 
     for project_id in projects:
         for s in enabled_series:
@@ -284,7 +228,7 @@ def setup_scheduler(periods, store, ceilometer):
             'default': ThreadPoolExecutor(1)})
 
     # the special alive job
-    report_alive_period = get_cfg_option("scheduler", "report_alive_period", 'int')
+    report_alive_period = cfg.get("scheduler", "report_alive_period", 'int')
     logger.info("Registering report_alive job every %ds " % report_alive_period)
     scheduler.add_job(func=report_alive,
 
@@ -311,7 +255,7 @@ def setup_scheduler(periods, store, ceilometer):
                       # trigger (pass None to add the job as paused)
                       next_run_time=datetime.datetime.utcnow())
 
-    misfire_grace_time = get_cfg_option("collector", "misfire_grace_time", "int")
+    misfire_grace_time = cfg.get("collector", "misfire_grace_time", "int")
     for name in periods:
         period = periods[name]
         logger.info("Registering collect job for period %s (%ds)" %(name, period))
@@ -355,16 +299,16 @@ def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
     logger.info("Reading configuration file: %s." % cfg_file)
-    config.read(cfg_file)
+    cfg.read(cfg_file)
 
-    db_connection = get_cfg_option('db', 'connection')
-    store_api_url = get_cfg_option('store', 'api-url')
+    db_connection = cfg.get('db', 'connection')
+    store_api_url = cfg.get('store', 'api-url')
 
     store = Store(store_api_url)
     ceilometer = Ceilometer(db_connection)
 
     # configure the scheduler
-    periods = get_periods_cfg()
+    periods = cfg.get_periods()
 
     single_shot = args.single_shot
     if single_shot:
