@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-19T16:46:42cest>
+# Time-stamp: <2016-07-19T17:21:48cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -44,6 +44,7 @@ class Pollster(object):
     series_id = None
     start = None
     end = None
+    force = False
 
     def __init__(self, series, start, end):
         self.project_id = series['project_id']
@@ -53,17 +54,19 @@ class Pollster(object):
         self.start = start
         self.end = end
 
-    def run(self):
+    def run(self, force=False):
         # FIXME: check if a sample already exist
         #
         # We should check here only the last_timestamp field, and use
         # the following only in case of errors in store_sample
         s = apistorage.sample(series_id=self.series_id,
                               timestamp=self.end)
-
-        if len(s):
+        if s and not force:
             logger.debug("Sample already exists, skipping")
         else:
+            if force:
+                self.force = True
+                logger.debug("Sample already exists, force enabled")
             self.do()
 
         # FIXME: get last_timestamp from apistorage
@@ -73,7 +76,8 @@ class Pollster(object):
     def store_sample(self, value):
         ret = apistorage.add_sample(series_id=self.series_id,
                                     timestamp=self.end,
-                                    value=value)
+                                    value=value,
+                                    force=self.force)
 
 
 class CPUPollster(Pollster):

@@ -5,7 +5,7 @@
 #
 # Filename: apistorage.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-19T16:31:54cest>
+# Time-stamp: <2016-07-19T17:18:21cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -169,7 +169,7 @@ def series_grid(series_id, start_date=None):
     r = get('series/%d/grid' % series_id, params=params)['grid']
     return list(utils.parse_date(v) for v in r)
 
-def add_sample(series_id, timestamp, value):
+def add_sample(series_id, timestamp, value, force=False):
     data = {
         'sample': {
             'series_id': series_id,
@@ -177,6 +177,9 @@ def add_sample(series_id, timestamp, value):
             'value': value,
         }
     }
+
+    if force:
+        data['sample']['force'] = True
 
     return post('samples', data)
 

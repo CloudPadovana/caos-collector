@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-19T16:44:41cest>
+# Time-stamp: <2016-07-19T17:11:04cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -69,6 +69,11 @@ parser.add_argument('-s', '--single-shot',
                     nargs='?',
                     const=utils.format_date(datetime.datetime.utcnow()),
                     help='Perform a single shot collection')
+
+parser.add_argument('-f', '--force',
+                    action='store_const',
+                    const=True,
+                    help='Force collection of data')
 
 
 def get_keystone_session():
@@ -142,12 +147,12 @@ pollsters = {
 }
 
 
-def collect_real(metric_name, series, start, end):
+def collect_real(metric_name, series, start, end, force):
     logger.info("Collecting from %s to %s", start, end)
 
     pollster = pollsters[metric_name]
     pollster_instance = pollster(series=series, start=start, end=end)
-    last_timestamp = pollster_instance.run()
+    last_timestamp = pollster_instance.run(force)
     return last_timestamp
 
 
@@ -155,7 +160,7 @@ def report_alive():
     logger.info("Collector is alive")
 
 
-def collect(period_name, period, misfire_grace_time, single_shot=None):
+def collect(period_name, period, misfire_grace_time, force=False, single_shot=None):
     logger.info("Starting collection for period %s (%ds)" %(period_name, period))
 
     # get a keystone session
@@ -218,7 +223,7 @@ def collect(period_name, period, misfire_grace_time, single_shot=None):
                 return
 
 
-def setup_scheduler(periods):
+def setup_scheduler(periods, force):
     log.setup_apscheduler_logger()
     scheduler = BlockingScheduler(
         timezone="utc",
@@ -268,7 +273,8 @@ def setup_scheduler(periods):
                           kwargs={
                               "period_name": name,
                               "period": period,
-                              "misfire_grace_time": misfire_grace_time
+                              "misfire_grace_time": misfire_grace_time,
+                              "force": force
                           },
 
                           # seconds after the designated runtime that
@@ -306,12 +312,16 @@ def main():
     # configure the scheduler
     periods = cfg.get_periods()
 
+    force = args.force
+    if force:
+        logger.info("FORCING COLLECTION")
+
     single_shot = args.single_shot
     if single_shot:
         logger.info("SINGLE SHOT %s", single_shot)
         return
 
-    scheduler = setup_scheduler(periods=periods)
+    scheduler = setup_scheduler(periods=periods, force=force)
 
     def sigterm_handler(_signo, _stack_frame):
         # Raises SystemExit(0):
