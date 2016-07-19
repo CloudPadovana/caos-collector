@@ -5,7 +5,7 @@
 #
 # Filename: store.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-15T18:04:09cest>
+# Time-stamp: <2016-07-19T12:50:34cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -27,9 +27,9 @@
 ######################################################################
 
 import requests
-import datetime
 
 import log
+import utils
 
 
 logger = log.get_logger()
@@ -40,12 +40,6 @@ class Store:
 
     def __init__(self, store_api_url):
         self.store_api_url = store_api_url
-
-    def _format_date(self, date):
-        return date.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    def _parse_date(self, date):
-        return datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
 
     def _request(self, rest_type, api, data=None, params=None):
         fun = getattr(requests, rest_type)
@@ -134,7 +128,7 @@ class Store:
         for s in series:
             i = dict((p, s[p]) for p in s)
             if i['last_timestamp']:
-                i['last_timestamp'] = self._parse_date(i['last_timestamp'])
+                i['last_timestamp'] = utils.parse_date(i['last_timestamp'])
             ret.append(i)
         return ret
 
@@ -168,16 +162,16 @@ class Store:
     def series_grid(self, series_id, start_date=None):
         params = {}
         if start_date:
-            params['start_date'] = self._format_date(start_date)
+            params['start_date'] = utils.format_date(start_date)
 
         r = self.get('series/%d/grid' % series_id, params=params)['grid']
-        return list(self._parse_date(v) for v in r)
+        return list(utils.parse_date(v) for v in r)
 
     def add_sample(self, series_id, timestamp, value):
         data = {
             'sample': {
                 'series_id': series_id,
-                'timestamp': self._format_date(timestamp),
+                'timestamp': utils.format_date(timestamp),
                 'value': value,
             }
         }
@@ -189,6 +183,6 @@ class Store:
         if series_id:
             params['series_id'] = series_id
         if timestamp:
-            params['timestamp'] = self._format_date(timestamp)
+            params['timestamp'] = utils.format_date(timestamp)
 
         return self.get('samples', params=params)
