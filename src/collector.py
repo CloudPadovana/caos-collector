@@ -269,21 +269,7 @@ def collect(period_name, period, store, ceilometer, misfire_grace_time):
                 return
 
 
-def main():
-    args = parser.parse_args()
-    cfg_file = args.cfg_file
-    logger.info("Reading configuration file: %s." % cfg_file)
-    config.read(cfg_file)
-
-    db_connection = get_cfg_option('db', 'connection')
-    store_api_url = get_cfg_option('store', 'api-url')
-
-    store = Store(store_api_url)
-    ceilometer = Ceilometer(db_connection)
-
-    # configure the scheduler
-    periods = get_periods_cfg()
-
+def setup_scheduler(periods, store, ceilometer):
     log.setup_apscheduler_logger()
     scheduler = BlockingScheduler(
         timezone="utc",
@@ -356,6 +342,26 @@ def main():
                           # paused)
                           next_run_time=datetime.datetime.utcnow())
 
+    return scheduler
+
+def main():
+    args = parser.parse_args()
+    cfg_file = args.cfg_file
+    logger.info("Reading configuration file: %s." % cfg_file)
+    config.read(cfg_file)
+
+    db_connection = get_cfg_option('db', 'connection')
+    store_api_url = get_cfg_option('store', 'api-url')
+
+    store = Store(store_api_url)
+    ceilometer = Ceilometer(db_connection)
+
+    # configure the scheduler
+    periods = get_periods_cfg()
+
+    scheduler = setup_scheduler(periods=periods,
+                                store=store,
+                                ceilometer=ceilometer)
     def sigterm_handler(_signo, _stack_frame):
         # Raises SystemExit(0):
         sys.exit(0)
