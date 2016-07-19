@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-19T16:32:30cest>
+# Time-stamp: <2016-07-19T16:46:42cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -31,6 +31,7 @@ from bson import SON
 
 import log
 import apistorage
+import ceilometer
 
 
 logger = log.get_logger()
@@ -41,16 +42,14 @@ class Pollster(object):
     metric_name = None
     period = None
     series_id = None
-    ceilometer = None
     start = None
     end = None
 
-    def __init__(self, series, ceilometer, start, end):
+    def __init__(self, series, start, end):
         self.project_id = series['project_id']
         self.metric_name = series['metric_name']
         self.period = series['period']
         self.series_id = series['id']
-        self.ceilometer = ceilometer
         self.start = start
         self.end = end
 
@@ -84,9 +83,9 @@ class CPUPollster(Pollster):
         super(self.__class__, self).__init__(*args, **kwargs)
 
     def do(self):
-        resources = self.ceilometer.find_resources(project_id=self.project_id,
-                                                   meter=self._COUNTER_NAME,
-                                                   start=self.start, end=self.end)
+        resources = ceilometer.find_resources(project_id=self.project_id,
+                                              meter=self._COUNTER_NAME,
+                                              start=self.start, end=self.end)
         logger.debug("Project %s has %d resources" %(self.project_id, len(resources)))
 
         values = []
@@ -165,18 +164,18 @@ class CPUPollster(Pollster):
         # left edge
         timestamp_query = {'$lte': start}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r1 = self.ceilometer.meter_db.find(query, projection).sort('timestamp', DESCENDING).limit(1)
+        r1 = ceilometer.meter_db().find(query, projection).sort('timestamp', DESCENDING).limit(1)
 
         # data
         timestamp_query = {'$gt': start,
                            '$lte': end}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r2 = self.ceilometer.meter_db.find(query, projection).sort('timestamp', ASCENDING)
+        r2 = ceilometer.meter_db().find(query, projection).sort('timestamp', ASCENDING)
 
         # right edge
         timestamp_query = {'$gt': end}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r3 = self.ceilometer.meter_db.find(query, projection).sort('timestamp', ASCENDING).limit(1)
+        r3 = ceilometer.meter_db().find(query, projection).sort('timestamp', ASCENDING).limit(1)
 
         # FIXME: missing data
         #

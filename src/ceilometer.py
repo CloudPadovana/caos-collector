@@ -5,7 +5,7 @@
 #
 # Filename: ceilometer.py
 # Created: 2016-07-01T16:49:54+0200
-# Time-stamp: <2016-07-14T09:23:34cest>
+# Time-stamp: <2016-07-19T16:47:30cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -36,47 +36,68 @@ from bson import SON
 logger = log.get_logger()
 
 
-class Ceilometer:
-    def __init__(self, db_connection):
-        logger.info("Connecting to: %s." % db_connection)
-        self.mongo = pymongo.MongoClient(db_connection)
-        logger.debug(self.mongo.server_info())
-        self.db = self.mongo.ceilometer
-        self.meter_db = self.db.meter
-        self.resource_db = self.db.resource
+_mongo = None
+_db = None
+_meter_db = None
+_resource_db = None
 
-    def find_resources(self, project_id, meter, start, end):
-        """ Find the resources in the given project that:
-        - have a meter named __meter__
-        - have at least one sample between start and end
-        """
 
-        # FIXME: missing data (see CPUPollster)
-        #
-        # Due to the way ceilometer stores information about
-        # resources, in order to be sure to have at least on sample
-        # between start and end a query to the meter_db is necessary
+def initialize(db_connection):
+    logger.info("Connecting to: %s." % db_connection)
+    global _mongo
+    _mongo = pymongo.MongoClient(db_connection)
+    logger.debug(_mongo.server_info())
 
-        query = SON([
-            ('project_id', project_id),
-            ('source', 'openstack'),
-            ('meter.counter_name', meter),
-            ('first_sample_timestamp', {
-                '$lt': end
-            }),
-            ('last_sample_timestamp', {
-                '$gt': start
-            })
-        ])
+    global _db
+    _db = _mongo.ceilometer
 
-        projection = {
-            "_id": True
-        }
+    global _meter_db
+    _meter_db = _db.meter
 
-        logger.debug("Mongo query: %s" % query)
-        resources = self.resource_db.find(query, projection=projection)
-        logger.debug("Got %d resources" % resources.count())
-        ret = []
-        for r in resources:
-            ret.append(r['_id'])
-        return ret
+    global _resource_db
+    _resource_db = _db.resource
+
+
+def meter_db():
+    return _meter_db
+
+
+def resource_db():
+    return _resource_db
+
+
+def find_resources(project_id, meter, start, end):
+    """ Find the resources in the given project that:
+    - have a meter named __meter__
+    - have at least one sample between start and end
+    """
+
+    # FIXME: missing data (see CPUPollster)
+    #
+    # Due to the way ceilometer stores information about
+    # resources, in order to be sure to have at least on sample
+    # between start and end a query to the meter_db is necessary
+
+    query = SON([
+        ('project_id', project_id),
+        ('source', 'openstack'),
+        ('meter.counter_name', meter),
+        ('first_sample_timestamp', {
+            '$lt': end
+        }),
+        ('last_sample_timestamp', {
+            '$gt': start
+        })
+    ])
+
+    projection = {
+        "_id": True
+    }
+
+    logger.debug("Mongo query: %s" % query)
+    resources = _resource_db.find(query, projection=projection)
+    logger.debug("Got %d resources" % resources.count())
+    ret = []
+    for r in resources:
+        ret.append(r['_id'])
+    return ret
