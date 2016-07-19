@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-15T18:04:32cest>
+# Time-stamp: <2016-07-19T13:09:31cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -37,6 +37,7 @@ from _version import __version__
 from store import Store
 from ceilometer import Ceilometer
 import log
+import utils
 
 from keystoneclient.auth.identity import v3
 from keystoneauth1 import session
@@ -62,6 +63,12 @@ parser.add_argument('-c', '--config',
                     dest='cfg_file', metavar='FILE',
                     default='collector.conf',
                     help='configuration file')
+
+parser.add_argument('-s', '--single-shot',
+                    dest='single_shot', metavar='TIMESTAMP',
+                    nargs='?',
+                    const=utils.format_date(datetime.datetime.utcnow()),
+                    help='Perform a single shot collection')
 
 
 def get_cfg_option(section, option=None, type=None):
@@ -358,6 +365,11 @@ def main():
 
     # configure the scheduler
     periods = get_periods_cfg()
+
+    single_shot = args.single_shot
+    if single_shot:
+        logger.info("SINGLE SHOT %s", single_shot)
+        return
 
     scheduler = setup_scheduler(periods=periods,
                                 store=store,
