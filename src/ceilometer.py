@@ -5,7 +5,7 @@
 #
 # Filename: ceilometer.py
 # Created: 2016-07-01T16:49:54+0200
-# Time-stamp: <2016-07-20T12:54:50cest>
+# Time-stamp: <2016-07-20T13:59:27cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -42,11 +42,21 @@ _meter_db = None
 _resource_db = None
 
 
-def initialize(mongodb):
+class ConnectionError(Exception):
+    pass
+
+def initialize(mongodb, connect_timeout):
     logger.info("Connecting to: %s." % mongodb)
     global _mongo
-    _mongo = pymongo.MongoClient(mongodb)
-    logger.debug(_mongo.server_info())
+    try:
+        _mongo = pymongo.MongoClient(mongodb,
+                                     connectTimeoutMS=connect_timeout*1000,
+                                     serverSelectionTimeoutMS=connect_timeout*1000)
+        server_info = _mongo.server_info()
+    except pymongo.errors.ServerSelectionTimeoutError as e:
+        raise ConnectionError(e)
+
+    logger.debug(server_info)
 
     global _db
     _db = _mongo.ceilometer
