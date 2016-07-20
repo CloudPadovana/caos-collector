@@ -5,7 +5,7 @@
 #
 # Filename: ceilometer.py
 # Created: 2016-07-01T16:49:54+0200
-# Time-stamp: <2016-07-20T12:39:24cest>
+# Time-stamp: <2016-07-20T12:54:50cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -56,6 +56,12 @@ def initialize(mongodb):
 
     global _resource_db
     _resource_db = _db.resource
+
+
+def disconnect():
+    if _mongo:
+        logger.info("Disconnecting from mongodb")
+        _mongo.close()
 
 
 def meter_db():

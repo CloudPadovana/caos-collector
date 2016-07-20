@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-20T09:39:10cest>
+# Time-stamp: <2016-07-20T12:47:36cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -233,6 +233,12 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
                 return
 
 
+def collect_job(*args, **kwargs):
+    ret = collect(*args, **kwargs)
+    ceilometer.disconnect()
+    return ret
+
+
 def setup_scheduler(periods, force):
     log.setup_apscheduler_logger()
     scheduler = BlockingScheduler(
@@ -273,7 +279,7 @@ def setup_scheduler(periods, force):
         period = periods[name]
         logger.info("Registering collect job for period %s (%ds)" %(name, period))
 
-        scheduler.add_job(func=collect,
+        scheduler.add_job(func=collect_job,
 
                           # trigger that determines when func is called
                           trigger='interval',
@@ -341,7 +347,7 @@ def main():
                 "single_shot": utils.parse_date(single_shot)
             }
 
-            collect(**kwargs)
+            collect_job(**kwargs)
 
         return
 
