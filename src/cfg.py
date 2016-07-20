@@ -5,7 +5,7 @@
 #
 # Filename: cfg.py
 # Created: 2016-07-19T15:03:22+0200
-# Time-stamp: <2016-07-19T15:23:07cest>
+# Time-stamp: <2016-07-20T13:58:13cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -41,20 +41,23 @@ def read(*args):
     _config.read(*args)
 
 
-def get(section, option=None, type=None):
-    if not _config.has_section(section) and section != "DEFAULT":
+def get(section, option=None, type='str', default=None):
+    if not _config.has_section(section) and section != "DEFAULT" and not default:
         raise RuntimeError("No [%s] section in config file." % section)
 
     if option and not _config.has_option(section, option):
+        if default:
+            return default
         raise RuntimeError("No [%s]/%s option in config file." % (section, option))
 
     if not option:
         return _config.options(section)
 
-    if type:
-        fun = getattr(_config, "get%s" % type)
-    else:
+    if type == 'str':
         fun = getattr(_config, "get")
+    else:
+        fun = getattr(_config, "get%s" % type)
+
     return fun(section, option)
 
 
