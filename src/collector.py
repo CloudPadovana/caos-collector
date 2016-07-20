@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-19T17:11:04cest>
+# Time-stamp: <2016-07-20T09:39:10cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -313,11 +313,11 @@ def main():
     logger.info("Reading configuration file: %s." % cfg_file)
     cfg.read(cfg_file)
 
-    db_connection = cfg.get('db', 'connection')
+    mongodb = cfg.get('ceilometer', 'mongodb')
     store_api_url = cfg.get('store', 'api-url')
 
     apistorage.initialize(store_api_url)
-    ceilometer.initialize(db_connection)
+    ceilometer.initialize(mongodb)
 
     # configure the scheduler
     periods = cfg.get_periods()

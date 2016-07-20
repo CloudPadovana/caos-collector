@@ -5,7 +5,7 @@
 #
 # Filename: ceilometer.py
 # Created: 2016-07-01T16:49:54+0200
-# Time-stamp: <2016-07-19T16:47:30cest>
+# Time-stamp: <2016-07-20T12:39:24cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -42,10 +42,10 @@ _meter_db = None
 _resource_db = None
 
 
-def initialize(db_connection):
-    logger.info("Connecting to: %s." % db_connection)
+def initialize(mongodb):
+    logger.info("Connecting to: %s." % mongodb)
     global _mongo
-    _mongo = pymongo.MongoClient(db_connection)
+    _mongo = pymongo.MongoClient(mongodb)
     logger.debug(_mongo.server_info())
 
     global _db
