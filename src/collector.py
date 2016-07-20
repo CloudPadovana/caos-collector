@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-20T13:58:27cest>
+# Time-stamp: <2016-07-20T16:33:56cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -46,6 +46,9 @@ import keystoneclient.v2_0.client as keystone_client
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
+
+
+DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 
 
 log.setup_logger()
@@ -323,7 +326,8 @@ def main():
     cfg.read(cfg_file)
 
     mongodb = cfg.get('ceilometer', 'mongodb')
-    mongodb_connection_timeout = cfg.get('ceilometer', 'mongodb_connection_timeout', 'int', 1)
+    mongodb_connection_timeout = cfg.get('ceilometer', 'mongodb_connection_timeout',
+                                         'int', DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
 
     try:
         ceilometer.initialize(mongodb, mongodb_connection_timeout)
