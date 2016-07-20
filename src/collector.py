@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-20T09:39:10cest>
+# Time-stamp: <2016-07-20T16:10:50cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -48,6 +48,9 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 
 
+DEFAULT_CFG_FILE = '/etc/caos/collector.conf'
+
+
 log.setup_logger()
 logger = log.get_logger()
 logger.info("Logger setup.")
@@ -61,7 +64,7 @@ parser.add_argument('-v', '--version', action='version',
 
 parser.add_argument('-c', '--config',
                     dest='cfg_file', metavar='FILE',
-                    default='collector.conf',
+                    default=DEFAULT_CFG_FILE,
                     help='configuration file')
 
 parser.add_argument('-s', '--single-shot',
