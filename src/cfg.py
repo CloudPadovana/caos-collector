@@ -43,10 +43,10 @@ def read(*args):
 
 def get(section, option=None, type=None):
     if not _config.has_section(section) and section != "DEFAULT":
-        raise SystemError("No [%s] section in config file." % section)
+        raise RuntimeError("No [%s] section in config file." % section)
 
     if option and not _config.has_option(section, option):
-        raise SystemError("No [%s]/%s option in config file." % (section, option))
+        raise RuntimeError("No [%s]/%s option in config file." % (section, option))
 
     if not option:
         return _config.options(section)
