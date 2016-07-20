@@ -313,7 +313,6 @@ def setup_scheduler(periods, force):
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
-    logger.info("Reading configuration file: %s." % cfg_file)
     cfg.read(cfg_file)
 
     mongodb = cfg.get('ceilometer', 'mongodb')
