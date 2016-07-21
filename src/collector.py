@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-21T17:46:20cest>
+# Time-stamp: <2016-07-21T17:47:08cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -49,6 +49,8 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 
 
 DEFAULT_CFG_FILE = '/etc/caos/collector.conf'
+
+DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 
 
 log.setup_logger()
@@ -238,6 +240,15 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
                 return
 
 
+def collect_job(*args, **kwargs):
+    try:
+        collect(*args, **kwargs)
+    except ceilometer.ConnectionError as e:
+        logger.warn("Got mongo connection problems: %s. Retrying at next polling time.", e)
+
+    ceilometer.disconnect()
+
+
 def setup_scheduler(periods, force):
     log.setup_apscheduler_logger()
     scheduler = BlockingScheduler(
@@ -278,7 +289,7 @@ def setup_scheduler(periods, force):
         period = periods[name]
         logger.info("Registering collect job for period %s (%ds)" %(name, period))
 
-        scheduler.add_job(func=collect,
+        scheduler.add_job(func=collect_job,
 
                           # trigger that determines when func is called
                           trigger='interval',
@@ -318,10 +329,19 @@ def main():
     cfg.read(cfg_file)
 
     mongodb = cfg.get('ceilometer', 'mongodb')
+    mongodb_connection_timeout = cfg.get('ceilometer', 'mongodb_connection_timeout',
+                                         'int', DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
+
+    try:
+        ceilometer.initialize(mongodb, mongodb_connection_timeout)
+    except ceilometer.ConnectionError as e:
+        logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
+        sys.exit(1)
+
     store_api_url = cfg.get('store', 'api-url')
 
     apistorage.initialize(store_api_url)
-    ceilometer.initialize(mongodb)
+
 
     # configure the scheduler
     periods = cfg.get_periods()
@@ -345,7 +365,7 @@ def main():
                 "single_shot": utils.parse_date(single_shot)
             }
 
-            collect(**kwargs)
+            collect_job(**kwargs)
 
         return
 
