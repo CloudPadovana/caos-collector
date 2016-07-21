@@ -5,7 +5,7 @@
 #
 # Filename: utils.py
 # Created: 2016-07-19T12:48:44+0200
-# Time-stamp: <2016-07-21T17:23:54cest>
+# Time-stamp: <2016-07-21T17:40:57cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -28,7 +28,14 @@
 
 import datetime
 
-EPOCH = datetime.datetime(1970, 1, 1, 0, 0, 0, 0)
+EPOCH = datetime.datetime(year=1970,
+                          month=1,
+                          day=1,
+                          hour=0,
+                          minute=0,
+                          second=0,
+                          microsecond=0,
+                          tzinfo=None)
 
 def format_date(date):
     return date.strftime("%Y-%m-%dT%H:%M:%SZ")

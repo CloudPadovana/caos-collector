@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-20T09:39:10cest>
+# Time-stamp: <2016-07-21T17:42:45cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -197,12 +197,13 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
                                               force=force)
                 return
 
-            if not last_timestamp:
+
+            if force or not last_timestamp:
                 # this happens when the series has no data
                 logger.info("No previous measurements for project %s, metric %s, period %d", project_id, metric_name, period)
 
                 # set to epoch
-                last_timestamp = datetime.datetime(year=1970, month=1, day=1, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+                last_timestamp = utils.EPOCH
 
 
             if last_timestamp < end-datetime.timedelta(seconds=misfire_grace_time):
@@ -224,6 +225,7 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
                     last_timestamp = collect_real(metric_name=metric_name,
                                                   series=series,
                                                   start=start,
+                                                  force=force,
                                                   end=end)
 
 
