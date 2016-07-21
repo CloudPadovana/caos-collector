@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-21T17:47:08cest>
+# Time-stamp: <2016-07-21T17:55:19cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -180,8 +180,8 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
     # update the series (in case a new project has been added)
     update_series(projects, metrics)
 
-    metrics = ['cpu',]
-    projects = ['b38a0dab349e42bdbb469274b20a91b4',]
+    # metrics = ['cpu',]
+    # projects = ['b38a0dab349e42bdbb469274b20a91b4',]
     for project_id in projects:
         for metric_name in metrics:
             series = apistorage.series(project_id=project_id,
@@ -200,7 +200,7 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
                                               start=start,
                                               end=end,
                                               force=force)
-                return
+                continue
 
 
             if force or not last_timestamp:
