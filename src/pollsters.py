@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-21T17:35:46cest>
+# Time-stamp: <2016-07-21T17:50:14cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -60,8 +60,8 @@ class Pollster(object):
         #
         # We should check here only the last_timestamp field, and use
         # the following only in case of errors in store_sample
-        s = apistorage.sample(series_id=self.series_id,
-                              timestamp=self.end)
+        s = apistorage.samples(series_id=self.series_id,
+                               timestamp=self.end)
         if s and not force:
             logger.debug("Sample already exists, skipping")
         else:
