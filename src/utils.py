@@ -28,6 +28,8 @@
 
 import datetime
 
+EPOCH = datetime.datetime(1970, 1, 1, 0, 0, 0, 0)
+
 def format_date(date):
     return date.strftime("%Y-%m-%dT%H:%M:%SZ")
 

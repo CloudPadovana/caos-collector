@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-19T17:21:48cest>
+# Time-stamp: <2016-07-21T17:35:46cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -32,6 +32,7 @@ from bson import SON
 import log
 import apistorage
 import ceilometer
+import utils
 
 
 logger = log.get_logger()
@@ -99,7 +100,7 @@ class CPUPollster(Pollster):
                                       start=self.start,
                                       end=self.end,
                                       key='counter_volume')
-            if not v:
+            if v is None:
                 logger.debug("Missing %s data for resource %s" % (self.metric_name, resource_id))
                 continue
 
@@ -117,38 +118,38 @@ class CPUPollster(Pollster):
             ('source', 'openstack')
         ])
 
-    def interpolate_value(self, r1, r2, timestamp, key):
-        t1 = r1['timestamp']
-        v1 = r1[key]
+    def interpolate_value(self, samples, timestamp, key):
+        epoch = utils.EPOCH
 
-        t2 = r2['timestamp']
-        v2 = r2[key]
+        x = list((s['timestamp']-epoch).total_seconds() for s in samples)
+        y = list(s[key] for s in samples)
 
-        t = timestamp
-        dv = v2-v1
-        dt = (t2-t1).total_seconds()
-        v = v1 + dv/dt*((t-t1).total_seconds())
-        return v
+        x0 = (timestamp-epoch).total_seconds()
+        y0 = utils.interp(x, y, x0)
+        return y0
+
     def correct_monotonicity(self, items, key):
         # From the information we have, we just check if some value is
         # less than its predecessor. In this case we add a delta (also
         # to all the following values).
-
         delta = 0
+        ret = []
 
         i0 = items[0]
         v0 = i0[key]
+        ret.append(i0)
         for i in items[1:]:
             v = i[key]
             if v < v0:
-                logger.debug("Correcting monotonicity: %s, %d < %s, %d",i ,v, i0, v0)
+                logger.debug("Correcting monotonicity: %s, %d < %s, %d", i ,v, i0, v0)
+                # all the subsequent items will get the same correction
                 delta += abs(v-v0)
 
-                # all the subsequent items will get the same correction
-                items[0][key] = v + delta
+            i[key] = v + delta
+            ret.append(i)
             i0 = i
             v0 = v
-        return items
+        return ret
 
     def aggregate_values(self, resource_id, start, end, key):
         # To capture a proper value for CPU time, we need to query the
@@ -181,29 +182,33 @@ class CPUPollster(Pollster):
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
         r3 = ceilometer.meter_db().find(query, projection).sort('timestamp', ASCENDING).limit(1)
 
-        # FIXME: missing data
-        #
         # At this point, due to the way ceilometer stores information
-        # about resources (even after find_resources()), r1 and/or r2
-        # could be empty, possibly due to:
+        # about resources (even after find_resources()), some or all
+        # of r1, r2, and r3 could be empty, possibly due to:
         #
         #   - the instance has not yet been created
         #   - the instance has been just started
         #   - the instance has just been deleted
         #   - meter data is missing (e.g. ceilometer has been stopped)
-        #
-        # For the moment, we just return None
-        if not r1.count(with_limit_and_skip=True) or not r3.count(with_limit_and_skip=True):
+
+        samples = []
+        if r1.count(with_limit_and_skip=True):
+            samples.append(r1[0])
+
+        if r2.count(with_limit_and_skip=True):
+            samples.extend(list(r2))
+
+        if r3.count(with_limit_and_skip=True):
+            samples.append(r3[0])
+
+        if len(samples) < 2:
             return None
 
-        r = []
-        r.append(r1[0])
-        r.extend(list(r2))
-        r.append(r3[0])
+        samples = self.correct_monotonicity(samples, key=key)
 
-        r = self.correct_monotonicity(r, key=key)
+        v1 = self.interpolate_value(samples, timestamp=start, key=key)
+        v2 = self.interpolate_value(samples, timestamp=end, key=key)
 
-        v1 = self.interpolate_value(r[0], r[1], timestamp=start, key=key)
-        v2 = self.interpolate_value(r[-2], r[-1], timestamp=end, key=key)
+        ret = (v2-v1)/1e9
+        return ret
 
-        return (v2-v1)/1e9
