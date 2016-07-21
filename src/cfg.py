@@ -5,7 +5,7 @@
 #
 # Filename: cfg.py
 # Created: 2016-07-19T15:03:22+0200
-# Time-stamp: <2016-07-19T15:23:07cest>
+# Time-stamp: <2016-07-20T16:12:14cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -27,18 +27,31 @@
 ######################################################################
 
 import ConfigParser
+import os
+
+import log
+logger = log.get_logger()
 
 
 _config = None
 
 
-def read(*args):
+def read(cfg_file):
+    logger.info("Reading configuration file: %s." % cfg_file)
+
     global _config
     if _config:
         raise RuntimeError("cfg file already parsed")
 
+    fname = None
+    if os.path.exists(cfg_file) and os.path.isfile(cfg_file):
+        fname = cfg_file
+
+    if not fname:
+        raise RuntimeError("cfg file '%s' doesn't exists", cfg_file)
+
     _config = ConfigParser.RawConfigParser()
-    _config.read(*args)
+    _config.read(fname)
 
 
 def get(section, option=None, type=None):
