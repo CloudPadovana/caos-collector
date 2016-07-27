@@ -5,7 +5,7 @@
 #
 # Filename: ceilometer.py
 # Created: 2016-07-01T16:49:54+0200
-# Time-stamp: <2016-07-27T10:01:53cest>
+# Time-stamp: <2016-07-27T15:47:42cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -89,11 +89,11 @@ def find_resources(project_id, meter, start=None, end=None):
     - have at least one sample between start and end
     """
 
-    # FIXME: missing data (see CPUPollster)
+    # NOTE: on missing data
     #
-    # Due to the way ceilometer stores information about
-    # resources, in order to be sure to have at least on sample
-    # between start and end a query to the meter_db is necessary
+    # Due to the way ceilometer stores information about resources, a
+    # query to meter_db is necessary to be sure to have at least one
+    # sample between start and end
 
     query_list = [
         ('project_id', project_id),
@@ -102,7 +102,7 @@ def find_resources(project_id, meter, start=None, end=None):
     ]
 
     if end is None and start is not None:
-        warnings.warn("find_resources: cannot keep query order with end=None", RuntimeWarning)
+        logger.warn("find_resources: cannot ensure query order with end=None")
 
     if end is not None:
         query_list.append(
