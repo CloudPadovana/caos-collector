@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-27T15:04:20cest>
+# Time-stamp: <2016-07-27T17:07:23cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -69,16 +69,10 @@ parser.add_argument('-c', '--config',
                     default=DEFAULT_CFG_FILE,
                     help='configuration file')
 
-parser.add_argument('-m', '--multi-shot',
-                    dest='multi_shot', metavar=('TIMESTAMP', 'N'),
-                    nargs=2,
-                    help='Perform multiple (N) shot collection from TIMESTAMP')
-
-parser.add_argument('-s', '--single-shot',
-                    dest='single_shot', metavar='TIMESTAMP',
-                    nargs='?',
-                    const=utils.format_date(datetime.datetime.utcnow()),
-                    help='Perform a single shot collection from TIMESTAMP or now (same as --multi-shot TIMESTAMP 1)')
+parser.add_argument('-s', '--shot',
+                    dest='shot', metavar=('TIMESTAMP', 'N', 'PERIOD', 'METRIC'),
+                    nargs=4,
+                    help='Perform multiple (N) shot collection of METRIC from TIMESTAMP with period PERIOD')
 
 parser.add_argument('-f', '--force',
                     action='store_const',
@@ -170,7 +164,7 @@ def report_alive():
     logger.info("Collector is alive")
 
 
-def collect(period_name, period, misfire_grace_time, force=False, shots=None):
+def collect(period_name, period, misfire_grace_time, force=False, shot=None):
     logger.info("Starting collection for period %s (%ds)" %(period_name, period))
 
     # get a keystone session
@@ -181,6 +175,13 @@ def collect(period_name, period, misfire_grace_time, force=False, shots=None):
 
     # update the metrics (this will not reread the config file)
     metrics = update_metrics()
+    if shot:
+        shot_metric = shot['metric']
+        if shot_metric != 'ALL':
+            if not shot_metric in metrics:
+                logger.error("Unknown shot metric %s (use ALL or one of %s)" % (shot_metric, metrics.keys()))
+                sys.exit(1)
+            metrics = {shot_metric: metrics[shot_metric]}
 
     # update the series (in case a new project has been added)
     update_series(projects, metrics)
@@ -195,10 +196,10 @@ def collect(period_name, period, misfire_grace_time, force=False, shots=None):
             end = datetime.datetime.utcnow()
 
 
-            if shots:
-                logger.info("Doing %d shots starting at %s for project %s, metric %s, period %d", shots[1], shots[0], project_id, metric_name, period)
+            if shot:
+                logger.info("Doing %d shots starting at %s for project %s, metric %s, period %d", shot['N'], shot['timestamp'], project_id, metric_name, period)
 
-                last_timestamp = shots[0] - datetime.timedelta(seconds=period+1)
+                last_timestamp = shot['timestamp'] - datetime.timedelta(seconds=period+1)
             else:
                 if force:
                     logger.info("Forcing measurements for project %s, metric %s, period %d", project_id, metric_name, period)
@@ -224,8 +225,8 @@ def collect(period_name, period, misfire_grace_time, force=False, shots=None):
                 time_grid = apistorage.series_grid(series_id=series['id'],
                                                    start_date=last_timestamp)
 
-                if shots:
-                    N = shots[1]
+                if shot:
+                    N = shot['N']
                     time_grid = time_grid[0:N]
 
                 for ts in time_grid:
@@ -357,22 +358,21 @@ def main():
 
 
     # handle shots
-    shots = None
-    multi_shot_arg = args.multi_shot
-    single_shot_arg = args.single_shot
-    if single_shot_arg and multi_shot_arg:
-        raise RuntimeError("Cannot give both --single-shot and --multi-shot")
-
-    if single_shot_arg:
-        logger.info("SINGLE SHOT %s", single_shot_arg)
-        shots = [single_shot_arg, 1]
-    elif multi_shot_arg:
-        logger.info("MULTI SHOT %s", multi_shot_arg)
-        shots = multi_shot_arg
-
-    if shots:
-        shots[0] = utils.parse_date(shots[0])
-        shots[1] = int(shots[1])
+    shot_arg = args.shot
+    if shot_arg:
+        logger.info("SHOT %s", shot_arg)
+        shot = {
+            'timestamp': utils.parse_date(shot_arg[0]),
+            'N': int(shot_arg[1]),
+            'period': shot_arg[2],
+            'metric': shot_arg[3]
+        }
+        shot_period = shot['period']
+        if shot_period != 'ALL':
+            if not shot_period in periods:
+                logger.error("Unknown shot period %s (use ALL or one of %s)" % (shot_period, periods.keys()))
+                sys.exit(1)
+            periods = {shot_period: periods[shot_period]}
 
         for name in periods:
             period = periods[name]
@@ -381,7 +381,7 @@ def main():
                 "period": period,
                 "misfire_grace_time": None,
                 "force": force,
-                "shots": shots
+                "shot": shot
             }
 
             collect_job(**kwargs)
