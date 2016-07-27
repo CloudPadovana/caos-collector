@@ -180,8 +180,6 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
     # update the series (in case a new project has been added)
     update_series(projects, metrics)
 
-    # metrics = ['cpu',]
-    # projects = ['b38a0dab349e42bdbb469274b20a91b4',]
     for project_id in projects:
         for metric_name in metrics:
             series = apistorage.series(project_id=project_id,
