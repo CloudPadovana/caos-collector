@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-21T17:55:19cest>
+# Time-stamp: <2016-07-27T14:20:19cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -73,7 +73,7 @@ parser.add_argument('-s', '--single-shot',
                     dest='single_shot', metavar='TIMESTAMP',
                     nargs='?',
                     const=utils.format_date(datetime.datetime.utcnow()),
-                    help='Perform a single shot collection')
+                    help='Perform a single shot collection at TIMESTAMP or now')
 
 parser.add_argument('-f', '--force',
                     action='store_const',
@@ -189,24 +189,22 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
             last_timestamp = series['last_timestamp']
             end = datetime.datetime.utcnow()
 
+
             if single_shot:
-                end = single_shot
-                start = end - datetime.timedelta(seconds=period)
+                logger.info("Single shot at %s for project %s, metric %s, period %d", single_shot, project_id, metric_name, period)
 
-                last_timestamp = collect_real(metric_name=metric_name,
-                                              series=series,
-                                              start=start,
-                                              end=end,
-                                              force=force)
-                continue
+                last_timestamp = single_shot-datetime.timedelta(seconds=period+1)
+            else:
+                if force:
+                    logger.info("Forcing measurements for project %s, metric %s, period %d", project_id, metric_name, period)
+                    # set to epoch
+                    last_timestamp = utils.EPOCH
+                elif not last_timestamp:
+                    # this happens when the series has no data
+                    logger.info("No previous measurements for project %s, metric %s, period %d", project_id, metric_name, period)
 
-
-            if force or not last_timestamp:
-                # this happens when the series has no data
-                logger.info("No previous measurements for project %s, metric %s, period %d", project_id, metric_name, period)
-
-                # set to epoch
-                last_timestamp = utils.EPOCH
+                    # set to epoch
+                    last_timestamp = utils.EPOCH
 
 
             if last_timestamp < end-datetime.timedelta(seconds=misfire_grace_time):
@@ -220,6 +218,9 @@ def collect(period_name, period, misfire_grace_time, force=False, single_shot=No
                 # it could go back in history
                 time_grid = apistorage.series_grid(series_id=series['id'],
                                                    start_date=last_timestamp)
+
+                if single_shot:
+                    time_grid = time_grid[0]
 
                 for ts in time_grid:
                     end = ts
