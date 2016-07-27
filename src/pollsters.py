@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-21T17:50:14cest>
+# Time-stamp: <2016-07-27T10:06:17cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -88,9 +88,13 @@ class CPUPollster(Pollster):
         super(self.__class__, self).__init__(*args, **kwargs)
 
     def do(self):
+        # NOTE: Here we grab all possible resources, irrespective of
+        # the time range. This come at the cost of possibly more
+        # queries, but the actual pollster implementation may be
+        # looking for samples outside the time range.
         resources = ceilometer.find_resources(project_id=self.project_id,
                                               meter=self._COUNTER_NAME,
-                                              start=self.start, end=self.end)
+                                              end=None, start=None)
         logger.debug("Project %s has %d resources" %(self.project_id, len(resources)))
 
         values = []

@@ -5,7 +5,7 @@
 #
 # Filename: ceilometer.py
 # Created: 2016-07-01T16:49:54+0200
-# Time-stamp: <2016-07-20T13:59:27cest>
+# Time-stamp: <2016-07-27T10:01:53cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -28,6 +28,7 @@
 
 import log
 import types
+import warnings
 
 import pymongo
 from bson import SON
@@ -82,7 +83,7 @@ def resource_db():
     return _resource_db
 
 
-def find_resources(project_id, meter, start, end):
+def find_resources(project_id, meter, start=None, end=None):
     """ Find the resources in the given project that:
     - have a meter named __meter__
     - have at least one sample between start and end
@@ -94,17 +95,28 @@ def find_resources(project_id, meter, start, end):
     # resources, in order to be sure to have at least on sample
     # between start and end a query to the meter_db is necessary
 
-    query = SON([
+    query_list = [
         ('project_id', project_id),
         ('source', 'openstack'),
-        ('meter.counter_name', meter),
-        ('first_sample_timestamp', {
-            '$lt': end
-        }),
-        ('last_sample_timestamp', {
-            '$gt': start
-        })
-    ])
+        ('meter.counter_name', meter)
+    ]
+
+    if end is None and start is not None:
+        warnings.warn("find_resources: cannot keep query order with end=None", RuntimeWarning)
+
+    if end is not None:
+        query_list.append(
+            ('first_sample_timestamp', {
+                '$lt': end
+            }))
+
+    if start is not None:
+        query_list.append(
+            ('last_sample_timestamp', {
+                '$gt': start
+            }))
+
+    query = SON(query_list)
 
     projection = {
         "_id": True
