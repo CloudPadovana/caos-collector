@@ -68,6 +68,7 @@ class Pollster(object):
         return sample
 
 
+
     def find_resources(self, meter):
         start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period)
         end = self.end + datetime.timedelta(seconds=self.ceilometer_polling_period)
@@ -83,11 +84,19 @@ class Pollster(object):
         return resources
 
 
-class CPUPollster(Pollster):
+class CeilometerPollster(Pollster):
+    counter_name = None
+
+    def __init__(self, counter_name, *args, **kwargs):
+        super(self.__class__, self).__init__(*args, **kwargs)
+        self.counter_name = counter_name
+
+
+class CPUPollster(CeilometerPollster):
     _COUNTER_NAME = "cpu"
 
     def __init__(self, *args, **kwargs):
-        super(self.__class__, self).__init__(*args, **kwargs)
+        super(self.__class__, self).__init__(counter_name=self._COUNTER_NAME, *args, **kwargs)
 
     def measure(self):
         resources = self.find_resources(meter=self._COUNTER_NAME)
