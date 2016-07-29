@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T12:40:42cest>
+# Time-stamp: <2016-07-29T12:41:26cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -117,14 +117,27 @@ class CPUPollster(CeilometerPollster):
         value = sum(values)
         return value
 
-    def build_query(self, resource_id, timestamp_query):
-        return SON([
-            ('resource_id', resource_id),
+    def build_query(self, resources, timestamp_query):
+        query_list = []
+
+        if type(resources) is str:
+            query_list.append(('resource_id', resources))
+        elif type(resources) is list:
+            query_list.append(('resource_id', {
+                '$in': resources
+            }))
+        else:
+            raise RuntimeError("Wrong argument resources: %s of type %s" % (resources, type(resources)))
+
+        query_list.extend([
             ('project_id', self.project_id),
             ('counter_name', self._COUNTER_NAME),
             ('timestamp', timestamp_query),
             ('source', 'openstack')
         ])
+
+        query = SON(query_list)
+        return query
 
     def interpolate_value(self, samples, timestamp, key):
         epoch = utils.EPOCH
