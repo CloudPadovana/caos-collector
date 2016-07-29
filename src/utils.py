@@ -5,7 +5,7 @@
 #
 # Filename: utils.py
 # Created: 2016-07-19T12:48:44+0200
-# Time-stamp: <2016-07-21T17:40:57cest>
+# Time-stamp: <2016-07-29T14:09:43cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -79,6 +79,7 @@ def parse_date(date):
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # LICENSE.txt (END)
 
+# Based on binary_search_with_guess(...) in numpy/core/src/multiarray/compiled_base.c
 def binary_search(x, x0):
     L = len(x)
 
@@ -95,6 +96,7 @@ def binary_search(x, x0):
         else: imax = imid
     return imin - 1
 
+# Based on arr_interp(...) in numpy/core/src/multiarray/compiled_base.c
 def interp(x, y, x0, left=None, right=None):
     L = len(x)
 
@@ -104,7 +106,7 @@ def interp(x, y, x0, left=None, right=None):
     j = binary_search(x, x0)
     if j == -1: return left
     elif j == L: return right
-    elif j == L - 1: return dy[j]
+    elif j == L - 1: return y[j]
     else:
         slope = (y[j+1] - y[j]) / (x[j+1] - x[j])
         return (slope*(x0 - x[j]) + y[j])
