@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-27T15:57:32cest>
+# Time-stamp: <2016-07-29T12:01:02cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -48,7 +48,6 @@ class Pollster(object):
     series_id = None
     start = None
     end = None
-    force = False
     time_range_margin = 0
 
     def __init__(self, series, start, end):
@@ -58,36 +57,20 @@ class Pollster(object):
         self.series_id = series['id']
         self.start = start
         self.end = end
-        self.time_range_margin = cfg.get("collector", "time_range_margin", "int")
+        self.ceilometer_polling_period = cfg.CEILOMETER_POLLING_PERIOD
 
-    def run(self, force=False):
-        # FIXME: check if a sample already exist
-        #
-        # We should check here only the last_timestamp field, and use
-        # the following only in case of errors in store_sample
-        s = apistorage.samples(series_id=self.series_id,
-                               timestamp=self.end)
-        if s and not force:
-            logger.debug("Sample already exists, skipping")
-        else:
-            if force:
-                self.force = True
-                logger.debug("Sample already exists, force enabled")
-            self.do()
+    def run(self, force_overwrite=False):
+        value = self.measure()
+        sample = apistorage.add_sample(series_id=self.series_id,
+                                       timestamp=self.end,
+                                       value=value,
+                                       force=force_overwrite)
+        return sample
 
-        # FIXME: get last_timestamp from apistorage
-        last_timestamp = self.end
-        return last_timestamp
-
-    def store_sample(self, value):
-        ret = apistorage.add_sample(series_id=self.series_id,
-                                    timestamp=self.end,
-                                    value=value,
-                                    force=self.force)
 
     def find_resources(self, meter):
-        start = self.start - datetime.timedelta(seconds=self.time_range_margin)
-        end = self.end + datetime.timedelta(seconds=self.time_range_margin)
+        start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period
+        end = self.end + datetime.timedelta(seconds=self.ceilometer_polling_period)
 
         resources = ceilometer.find_resources(project_id=self.project_id,
                                               meter=meter,
@@ -106,7 +89,7 @@ class CPUPollster(Pollster):
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
 
-    def do(self):
+    def measure(self):
         resources = self.find_resources(meter=self._COUNTER_NAME)
 
         values = []
@@ -123,7 +106,7 @@ class CPUPollster(Pollster):
             values.append(v)
 
         value = sum(values)
-        self.store_sample(value)
+        return value
 
     def build_query(self, resource_id, timestamp_query):
         return SON([

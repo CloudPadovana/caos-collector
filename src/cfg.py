@@ -5,7 +5,7 @@
 #
 # Filename: cfg.py
 # Created: 2016-07-19T15:03:22+0200
-# Time-stamp: <2016-07-29T11:43:11cest>
+# Time-stamp: <2016-07-29T12:00:33cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -61,6 +61,7 @@ STORE_API_URL = None
 
 CEILOMETER_MONGODB = None
 CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
+CEILOMETER_POLLING_PERIOD = None
 
 # defaults
 DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
@@ -94,7 +95,7 @@ def _parse_cfg():
     _assign('CEILOMETER_MONGODB_CONNECTION_TIMEOUT',
             _get('ceilometer', 'mongodb_connection_timeout',
                  'int', DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT))
-
+    _assign('CEILOMETER_POLLING_PERIOD', _get("ceilometer", "polling_period", "int"))
 
 def dump():
     pprint({'CFG': CFG})

@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-29T11:48:11cest>
+# Time-stamp: <2016-07-29T12:10:45cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -154,15 +154,15 @@ def collect_real(metric_name, series, start, end, force):
 
     pollster = pollsters[metric_name]
     pollster_instance = pollster(series=series, start=start, end=end)
-    last_timestamp = pollster_instance.run(force)
-    return last_timestamp
+    sample = pollster_instance.run(force)
+    return sample
 
 
 def report_alive():
     logger.info("Collector is alive")
 
 
-def collect(period_name, period, misfire_grace_time, force=False, shot=None):
+def collect(period_name, period, misfire_grace_time):
     logger.info("Starting collection for period %s (%ds)" %(period_name, period))
 
     # get a keystone session
@@ -173,6 +173,8 @@ def collect(period_name, period, misfire_grace_time, force=False, shot=None):
 
     # update the metrics (this will not reread the config file)
     metrics = update_metrics()
+
+    shot = cfg.CFG['shot']
     if shot:
         shot_metric = shot['metric']
         if shot_metric != 'ALL':
@@ -189,59 +191,72 @@ def collect(period_name, period, misfire_grace_time, force=False, shot=None):
             series = apistorage.series(project_id=project_id,
                                        metric_name=metric_name,
                                        period=period)[0]
-
+            series_id = series['id']
             last_timestamp = series['last_timestamp']
-            end = datetime.datetime.utcnow()
 
+            # If we have at least on period between now (end) and
+            # last_timestamp, then we collect (also respecting
+            # misfire_grace_time).
+            #
+            # If the --shot option is given, then we ignore those checks.
+            #
+            # If the --force option is given, we permit overwriting
+            # existing samples.
+
+            if not last_timestamp:
+                # this happens when the series has no data
+                logger.info("No previous measurements for project %s, metric %s, period %d", project_id, metric_name, period)
+
+                # set to epoch
+                last_timestamp = utils.EPOCH
 
             if shot:
                 logger.info("Doing %d shots starting at %s for project %s, metric %s, period %d", shot['N'], shot['timestamp'], project_id, metric_name, period)
-
-                last_timestamp = shot['timestamp'] - datetime.timedelta(seconds=period+1)
+                next_timestamp = shot['timestamp']
             else:
-                if force:
-                    logger.info("Forcing measurements for project %s, metric %s, period %d", project_id, metric_name, period)
-                    # set to epoch
-                    last_timestamp = utils.EPOCH
-                elif not last_timestamp:
-                    # this happens when the series has no data
-                    logger.info("No previous measurements for project %s, metric %s, period %d", project_id, metric_name, period)
+                next_timestamp = last_timestamp + datetime.timedelta(seconds=period)
 
-                    # set to epoch
-                    last_timestamp = utils.EPOCH
-
-
-            if misfire_grace_time and last_timestamp < end-datetime.timedelta(seconds=misfire_grace_time):
-                # we don't want to go too much back in history, set a sane starting point
-                logger.info("Going back in history")
-
-                last_timestamp = end - datetime.timedelta(seconds=misfire_grace_time)
-
-
-            if last_timestamp < end - datetime.timedelta(seconds=period):
-                # it could go back in history
-                time_grid = apistorage.series_grid(series_id=series['id'],
-                                                   start_date=last_timestamp)
-
-                if shot:
-                    N = shot['N']
-                    time_grid = time_grid[0:N]
-
-                for ts in time_grid:
-                    end = ts
-                    start = ts - datetime.timedelta(seconds=period)
-
-                    last_timestamp = collect_real(metric_name=metric_name,
-                                                  series=series,
-                                                  start=start,
-                                                  force=force,
-                                                  end=end)
-
-
-            else:
+            now = datetime.datetime.utcnow()
+            if next_timestamp > now:
                 # the series is already update
                 logger.info("Series %d is uptodate", series['id'])
-                return
+                continue
+
+
+            if not shot and misfire_grace_time > period:
+                # we respect a misfire_grace_time greater then the period
+                if next_timestamp < now - datetime.timedelta(seconds=misfire_grace_time):
+                    logger.info("Dropping history collection due to misfire_grace_time=%d" % misfire_grace_time)
+                    next_timestamp = now - datetime.timedelta(seconds=misfire_grace_time)
+
+
+            # ask for the time grid
+            time_grid = apistorage.series_grid(series_id=series_id,
+                                               start_date=next_timestamp)
+
+            if shot:
+                N = shot['N']
+                time_grid = time_grid[0:N]
+
+            for ts in time_grid:
+                end = ts
+                start = ts - datetime.timedelta(seconds=period)
+
+                # check if sample already exists:
+                s = apistorage.samples(series_id=series_id,
+                                       timestamp=ts)
+
+                if s and not force:
+                    logger.debug("Sample already exists, skipping")
+                else:
+                    sample = collect_real(metric_name=metric_name,
+                                          series=series,
+                                          start=start,
+                                          force=force,
+                                          end=end)
+
+                    if force:
+                        logger.warn("FORCE: sample %s overwritten by %s", s, sample)
 
 
 def collect_job(*args, **kwargs):
@@ -253,7 +268,7 @@ def collect_job(*args, **kwargs):
     ceilometer.disconnect()
 
 
-def setup_scheduler(periods, force):
+def setup_scheduler(periods):
     log.setup_apscheduler_logger()
     scheduler = BlockingScheduler(
         timezone="utc",
@@ -303,8 +318,7 @@ def setup_scheduler(periods, force):
                           kwargs={
                               "period_name": name,
                               "period": period,
-                              "misfire_grace_time": misfire_grace_time,
-                              "force": force
+                              "misfire_grace_time": misfire_grace_time
                           },
 
                           # seconds after the designated runtime that
@@ -334,6 +348,7 @@ def main():
     cfg.dump()
 
     force = args.force
+    cfg.CFG['force'] = force
     if force:
         logger.info("FORCE COLLECTION ENABLED")
         logger.warn("FORCE WILL OVERWRITE EXISTING DATA!!!!")
@@ -363,6 +378,9 @@ def main():
             'period': shot_arg[2],
             'metric': shot_arg[3]
         }
+        assert(shot['N'])
+        cfg.CFG['shot'] = shot
+
         shot_period = shot['period']
         if shot_period != 'ALL':
             if not shot_period in periods:
@@ -375,16 +393,14 @@ def main():
             kwargs={
                 "period_name": name,
                 "period": period,
-                "misfire_grace_time": None,
-                "force": force,
-                "shot": shot
+                "misfire_grace_time": None
             }
 
             collect_job(**kwargs)
 
         return
 
-    scheduler = setup_scheduler(periods=periods, force=force)
+    scheduler = setup_scheduler(periods=periods)
 
     def sigterm_handler(_signo, _stack_frame):
         # Raises SystemExit(0):
