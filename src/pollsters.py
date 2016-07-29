@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T12:39:43cest>
+# Time-stamp: <2016-07-29T12:40:42cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -77,16 +77,16 @@ class CeilometerPollster(Pollster):
         self.counter_name = counter_name
         self.ceilometer_polling_period = cfg.CEILOMETER_POLLING_PERIOD
 
-    def find_resources(self, meter):
+    def find_resources(self):
         start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period)
         end = self.end + datetime.timedelta(seconds=self.ceilometer_polling_period)
 
         resources = ceilometer.find_resources(project_id=self.project_id,
-                                              meter=meter,
+                                              meter=self.counter_name,
                                               start=start, end=end)
         logger.debug("Project %s has %d resources of type %s in the range from %s to %s" % (self.project_id,
                                                                                             len(resources),
-                                                                                            meter,
+                                                                                            self.counter_name,
                                                                                             start,
                                                                                             end))
         return resources
@@ -99,7 +99,7 @@ class CPUPollster(CeilometerPollster):
         super(self.__class__, self).__init__(counter_name=self._COUNTER_NAME, *args, **kwargs)
 
     def measure(self):
-        resources = self.find_resources(meter=self._COUNTER_NAME)
+        resources = self.find_resources()
 
         values = []
         for resource_id in resources:
