@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T12:19:20cest>
+# Time-stamp: <2016-07-29T12:51:34cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -32,7 +32,7 @@ import datetime
 
 
 import log
-import apistorage
+import caos_api
 import ceilometer
 import utils
 import cfg
@@ -61,10 +61,10 @@ class Pollster(object):
 
     def run(self, force_overwrite=False):
         value = self.measure()
-        sample = apistorage.add_sample(series_id=self.series_id,
-                                       timestamp=self.end,
-                                       value=value,
-                                       force=force_overwrite)
+        sample = caos_api.add_sample(series_id=self.series_id,
+                                     timestamp=self.end,
+                                     value=value,
+                                     force=force_overwrite)
         return sample
 
 

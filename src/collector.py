@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-29T12:10:45cest>
+# Time-stamp: <2016-07-29T12:51:20cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -33,7 +33,7 @@ import sys
 import signal
 
 from _version import __version__
-import apistorage
+import caos_api
 import ceilometer
 import log
 import utils
@@ -101,46 +101,46 @@ def update_projects(keystone_session):
     keystone_projects = dict((p.id, p.name) for p in keystone_projects)
 
     # get known projects
-    my_projects = apistorage.projects()
+    my_projects = caos_api.projects()
 
     for id in keystone_projects:
         name = keystone_projects[id]
         if id not in my_projects:
             logger.info("Adding new project %s (%s)" % (id, name))
-            apistorage.add_project(id, name)
+            caos_api.add_project(id, name)
         elif not my_projects[id] == name:
             logger.info("Updating project %s (%s)" % (id, name))
-            apistorage.set_project(id, name)
+            caos_api.set_project(id, name)
 
     return keystone_projects.keys()
 
 
 def update_metrics():
-    metrics = apistorage.metrics()
+    metrics = caos_api.metrics()
     enabled_metrics = cfg.METRICS
 
     for m in enabled_metrics:
         if m not in metrics:
             logger.info("Adding new metric %s" % m)
-            apistorage.add_metric(name=m, type=enabled_metrics[m]['type'])
+            caos_api.add_metric(name=m, type=enabled_metrics[m]['type'])
     return enabled_metrics
 
 
 def update_series(projects, metrics):
-    series = apistorage.series()
+    series = caos_api.series()
     enabled_series = cfg.SERIES
 
     for project_id in projects:
         for s in enabled_series:
             metric_name = s['metric_name']
             period = s['period']
-            if not apistorage.series(project_id=project_id,
-                                     metric_name=metric_name,
-                                     period=period):
+            if not caos_api.series(project_id=project_id,
+                                   metric_name=metric_name,
+                                   period=period):
                 logger.info("Adding new series %s/%d for project %s" % (metric_name, period, project_id))
-                apistorage.create_series(project_id=project_id,
-                                         metric_name=metric_name,
-                                         period=period)
+                caos_api.create_series(project_id=project_id,
+                                       metric_name=metric_name,
+                                       period=period)
 
 
 from pollsters import CPUPollster
@@ -188,9 +188,9 @@ def collect(period_name, period, misfire_grace_time):
 
     for project_id in projects:
         for metric_name in metrics:
-            series = apistorage.series(project_id=project_id,
-                                       metric_name=metric_name,
-                                       period=period)[0]
+            series = caos_api.series(project_id=project_id,
+                                     metric_name=metric_name,
+                                     period=period)[0]
             series_id = series['id']
             last_timestamp = series['last_timestamp']
 
@@ -231,8 +231,8 @@ def collect(period_name, period, misfire_grace_time):
 
 
             # ask for the time grid
-            time_grid = apistorage.series_grid(series_id=series_id,
-                                               start_date=next_timestamp)
+            time_grid = caos_api.series_grid(series_id=series_id,
+                                             start_date=next_timestamp)
 
             if shot:
                 N = shot['N']
@@ -243,8 +243,8 @@ def collect(period_name, period, misfire_grace_time):
                 start = ts - datetime.timedelta(seconds=period)
 
                 # check if sample already exists:
-                s = apistorage.samples(series_id=series_id,
-                                       timestamp=ts)
+                s = caos_api.samples(series_id=series_id,
+                                     timestamp=ts)
 
                 if s and not force:
                     logger.debug("Sample already exists, skipping")
@@ -362,7 +362,7 @@ def main():
         logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
         sys.exit(1)
 
-    apistorage.initialize(cfg.STORE_API_URL)
+    caos_api.initialize(cfg.CAOS_API_URL)
 
 
     # configure the scheduler

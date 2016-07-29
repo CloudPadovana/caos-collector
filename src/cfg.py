@@ -5,7 +5,7 @@
 #
 # Filename: cfg.py
 # Created: 2016-07-19T15:03:22+0200
-# Time-stamp: <2016-07-29T12:00:33cest>
+# Time-stamp: <2016-07-29T12:49:57cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -57,7 +57,7 @@ SCHEDULER_REPORT_ALIVE_PERIOD = None
 
 COLLECTOR_MISFIRE_GRACE_TIME = None
 
-STORE_API_URL = None
+CAOS_API_URL = None
 
 CEILOMETER_MONGODB = None
 CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
@@ -87,8 +87,8 @@ def _parse_cfg():
     _assign('COLLECTOR_MISFIRE_GRACE_TIME',
             _get("collector", "misfire_grace_time", "int"))
 
-    # [store]
-    _assign('STORE_API_URL', _get('store', 'api-url'))
+    # [caos-api]
+    _assign('CAOS_API_URL', _get('caos-api', 'api_url'))
 
     # [ceilometer]
     _assign('CEILOMETER_MONGODB', _get('ceilometer', 'mongodb'))

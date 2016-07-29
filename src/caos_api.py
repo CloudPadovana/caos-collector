@@ -3,9 +3,9 @@
 
 ######################################################################
 #
-# Filename: apistorage.py
+# Filename: caos_api.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-19T17:18:21cest>
+# Time-stamp: <2016-07-29T12:48:21cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -35,17 +35,17 @@ import utils
 logger = log.get_logger()
 
 
-_apistorage_url = None
+_caos_api_url = None
 
 
-def initialize(apistorage_url):
-    global _apistorage_url
+def initialize(caos_api_url):
+    global _caos_api_url
 
-    _apistorage_url = apistorage_url
+    _caos_api_url = caos_api_url
 
 def _request(rest_type, api, data=None, params=None):
     fun = getattr(requests, rest_type)
-    url = "%s/%s" % (_apistorage_url, api)
+    url = "%s/%s" % (_caos_api_url, api)
     r = fun(url, json=data, params=params)
     logger.debug("REST request: %s %s params=%s json=%s" % (rest_type, url, params, data))
     json = r.json()
