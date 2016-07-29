@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T12:42:53cest>
+# Time-stamp: <2016-07-29T12:43:19cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -113,31 +113,52 @@ class CeilometerPollster(Pollster):
         query = SON(query_list)
         return query
 
-class CPUPollster(CeilometerPollster):
-    _COUNTER_NAME = "cpu"
-
-    def __init__(self, *args, **kwargs):
-        super(self.__class__, self).__init__(counter_name=self._COUNTER_NAME, *args, **kwargs)
-
     def measure(self):
         resources = self.find_resources()
+
+        counter_key = 'counter_volume'
+
+        # find samples
+        projection = {
+            'resource_id': 1,
+            'timestamp': 1,
+            counter_key: 1
+        }
+
+        # To capture a proper value, we need to query the values
+        # between time 'start' and 'end', plus a margin given by
+        # ceilometer_polling_period. Then we interpolate according to
+        # our period.
+        timestamp_query = {
+            '$gte': start - datetime.timedelta(seconds=self.ceilometer_polling_period),
+            '$lte': end   + datetime.timedelta(seconds=self.ceilometer_polling_period)
+        }
+
+        query = self.build_query(resources, timestamp_query=timestamp_query)
+        cursor = ceilometer.meter_db().find(query, projection).sort('timestamp', ASCENDING)
+        allsamples = list(cursor)
 
         values = []
         for resource_id in resources:
             logger.debug("Aggregating %s for resource %s" % (self.metric_name, resource_id))
-            v = self.aggregate_values(resource_id=resource_id,
-                                      start=self.start,
-                                      end=self.end,
-                                      key='counter_volume')
+
+            samples = list(s for s in allsamples if s['resource_id'] == resource_id)
+            v = self.aggregate_resource(samples, key=counter_key)
             if v is None:
                 logger.debug("Missing %s data for resource %s" % (self.metric_name, resource_id))
                 continue
 
             values.append(v)
 
-        value = sum(values)
+        value = self.aggregate_values(values)
         return value
 
+
+class CPUPollster(CeilometerPollster):
+    _COUNTER_NAME = "cpu"
+
+    def __init__(self, *args, **kwargs):
+        super(self.__class__, self).__init__(counter_name=self._COUNTER_NAME, *args, **kwargs)
 
     def interpolate_value(self, samples, timestamp, key):
         epoch = utils.EPOCH
@@ -172,24 +193,7 @@ class CPUPollster(CeilometerPollster):
             v0 = v
         return ret
 
-    def aggregate_values(self, resource_id, start, end, key):
-        projection = {'timestamp': 1,
-                      key: 1,
-                      'resource_metadata.cpu_number': 1}
-
-        # To capture a proper value for CPU time, we need to query the
-        # values between time 'start' and 'end', plus a margin given
-        # by ceilometer_polling_period. Then we interpolate according
-        # to our period.
-        timestamp_query = {
-            '$gte': start - datetime.timedelta(seconds=self.ceilometer_polling_period),
-            '$lte': end   + datetime.timedelta(seconds=self.ceilometer_polling_period)
-        }
-
-        query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        cursor = ceilometer.meter_db().find(query, projection).sort('timestamp', ASCENDING)
-        samples = list(cursor)
-
+    def aggregate_resource(self, samples, key):
         # At this point, due to the way ceilometer stores information
         # about resources (even after find_resources()), data could be
         # missing, possibly due to:
@@ -209,9 +213,14 @@ class CPUPollster(CeilometerPollster):
 
         samples = self.correct_monotonicity(samples, key=key)
 
-        v1 = self.interpolate_value(samples, timestamp=start, key=key)
-        v2 = self.interpolate_value(samples, timestamp=end, key=key)
+        v1 = self.interpolate_value(samples, timestamp=self.start, key=key)
+        v2 = self.interpolate_value(samples, timestamp=self.end, key=key)
 
         ret = (v2-v1)/1e9
         return ret
+
+    def aggregate_values(self, values):
+        value = sum(values)
+        return value
+
 
