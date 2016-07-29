@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-29T11:42:39cest>
+# Time-stamp: <2016-07-29T11:48:11cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -75,7 +75,7 @@ parser.add_argument('-s', '--shot',
 parser.add_argument('-f', '--force',
                     action='store_const',
                     const=True,
-                    help='Force collection of data')
+                    help='Enable overwriting existing samples.')
 
 
 def get_keystone_session():
@@ -333,6 +333,14 @@ def main():
     cfg.read(cfg_file)
     cfg.dump()
 
+    force = args.force
+    if force:
+        logger.info("FORCE COLLECTION ENABLED")
+        logger.warn("FORCE WILL OVERWRITE EXISTING DATA!!!!")
+        answer = raw_input("Are you sure? Type YES (uppercase) to go on: ")
+        if not answer == "YES":
+            return
+
     try:
         ceilometer.initialize(cfg.CEILOMETER_MONGODB, cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
     except ceilometer.ConnectionError as e:
@@ -344,11 +352,6 @@ def main():
 
     # configure the scheduler
     periods = cfg.PERIODS
-
-    force = args.force
-    if force:
-        logger.info("FORCING COLLECTION")
-
 
     # handle shots
     shot_arg = args.shot
