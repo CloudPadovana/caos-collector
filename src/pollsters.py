@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T12:38:02cest>
+# Time-stamp: <2016-07-29T12:39:43cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -48,7 +48,6 @@ class Pollster(object):
     series_id = None
     start = None
     end = None
-    ceilometer_polling_period = None
 
     def __init__(self, series, start, end):
         self.project_id = series['project_id']
@@ -57,7 +56,7 @@ class Pollster(object):
         self.series_id = series['id']
         self.start = start
         self.end = end
-        self.ceilometer_polling_period = cfg.CEILOMETER_POLLING_PERIOD
+
 
     def run(self, force_overwrite=False):
         value = self.measure()
@@ -68,6 +67,15 @@ class Pollster(object):
         return sample
 
 
+class CeilometerPollster(Pollster):
+    counter_name = None
+    ceilometer_polling_period = None
+
+    def __init__(self, counter_name, *args, **kwargs):
+        super(self.__class__, self).__init__(*args, **kwargs)
+
+        self.counter_name = counter_name
+        self.ceilometer_polling_period = cfg.CEILOMETER_POLLING_PERIOD
 
     def find_resources(self, meter):
         start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period)
@@ -82,14 +90,6 @@ class Pollster(object):
                                                                                             start,
                                                                                             end))
         return resources
-
-
-class CeilometerPollster(Pollster):
-    counter_name = None
-
-    def __init__(self, counter_name, *args, **kwargs):
-        super(self.__class__, self).__init__(*args, **kwargs)
-        self.counter_name = counter_name
 
 
 class CPUPollster(CeilometerPollster):
