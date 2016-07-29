@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-29T13:00:29cest>
+# Time-stamp: <2016-07-29T15:05:19cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -342,11 +342,13 @@ def setup_scheduler(periods):
 
     return scheduler
 
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
     cfg.read(cfg_file)
     cfg.dump()
+    log.setup_file_handlers()
 
     force = args.force
     cfg.CFG['force'] = force

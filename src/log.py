@@ -5,7 +5,7 @@
 #
 # Filename: log.py
 # Created: 2016-07-01T12:30:34+0200
-# Time-stamp: <2016-07-14T14:55:29cest>
+# Time-stamp: <2016-07-29T15:04:20cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -27,6 +27,10 @@
 ######################################################################
 
 import logging
+import logging.handlers
+import os
+
+_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 def get_logger():
@@ -39,9 +43,7 @@ def setup_logger():
 
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
+    ch.setFormatter(_formatter)
     logger.addHandler(ch)
 
 
@@ -51,7 +53,31 @@ def setup_apscheduler_logger():
 
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
+    ch.setFormatter(_formatter)
     logger.addHandler(ch)
+
+
+def setup_file_handlers():
+    logger = get_logger()
+
+    import cfg
+    log_file = cfg.COLLECTOR_LOG_FILE
+    log_dir = os.path.dirname(log_file)
+
+    if not os.path.isdir(log_dir):
+        logger.info("Creating log dir %s", log_dir)
+        os.mkdir(log_dir)
+
+
+    ch = logging.handlers.RotatingFileHandler(cfg.COLLECTOR_LOG_FILE,
+                                              maxBytes=cfg.COLLECTOR_LOG_ROTATE_BYTES,
+                                              backupCount=cfg.COLLECTOR_LOG_ROTATE_COUNT)
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(_formatter)
+
+    logger.addHandler(ch)
+
+    logger = logging.getLogger('apscheduler')
+    logger.addHandler(ch)
+
+    logger.info("Setup log to file %s", cfg.COLLECTOR_LOG_FILE)

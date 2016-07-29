@@ -5,7 +5,7 @@
 #
 # Filename: cfg.py
 # Created: 2016-07-19T15:03:22+0200
-# Time-stamp: <2016-07-29T12:49:57cest>
+# Time-stamp: <2016-07-29T14:51:19cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -56,6 +56,9 @@ KEYSTONE_CACERT = None
 SCHEDULER_REPORT_ALIVE_PERIOD = None
 
 COLLECTOR_MISFIRE_GRACE_TIME = None
+COLLECTOR_LOG_FILE = None
+COLLECTOR_LOG_ROTATE_BYTES = None
+COLLECTOR_LOG_ROTATE_COUNT = None
 
 CAOS_API_URL = None
 
@@ -65,7 +68,9 @@ CEILOMETER_POLLING_PERIOD = None
 
 # defaults
 DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
-
+DEFAULT_COLLECTOR_LOG_FILE = "/var/log/caos/collector.log"
+DEFAULT_COLLECTOR_LOG_ROTATE_BYTES = (1048576*5)
+DEFAULT_COLLECTOR_LOG_ROTATE_COUNT = 30
 
 def _parse_cfg():
     _assign('METRICS', _get_metrics())
@@ -86,6 +91,15 @@ def _parse_cfg():
     # [collector]
     _assign('COLLECTOR_MISFIRE_GRACE_TIME',
             _get("collector", "misfire_grace_time", "int"))
+
+    _assign('COLLECTOR_LOG_FILE',
+            _get("collector", "log_file", "", DEFAULT_COLLECTOR_LOG_FILE))
+
+    _assign('COLLECTOR_LOG_ROTATE_BYTES',
+            _get("collector", "log_rotate_bytes", "int", DEFAULT_COLLECTOR_LOG_ROTATE_BYTES))
+
+    _assign('COLLECTOR_LOG_ROTATE_COUNT',
+            _get("collector", "log_rotate_count", "int", DEFAULT_COLLECTOR_LOG_ROTATE_COUNT))
 
     # [caos-api]
     _assign('CAOS_API_URL', _get('caos-api', 'api_url'))
@@ -128,7 +142,7 @@ def read(cfg_file):
         fname = cfg_file
 
     if not fname:
-        raise RuntimeError("cfg file '%s' doesn't exists", cfg_file)
+        raise RuntimeError("cfg file '%s' doesn't exists" % cfg_file)
 
     _config = ConfigParser.RawConfigParser()
     _config.read(fname)
