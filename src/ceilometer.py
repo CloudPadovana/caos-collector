@@ -5,7 +5,7 @@
 #
 # Filename: ceilometer.py
 # Created: 2016-07-01T16:49:54+0200
-# Time-stamp: <2016-07-27T15:47:42cest>
+# Time-stamp: <2016-07-29T12:16:33cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -39,8 +39,6 @@ logger = log.get_logger()
 
 _mongo = None
 _db = None
-_meter_db = None
-_resource_db = None
 
 
 class ConnectionError(Exception):
@@ -62,12 +60,6 @@ def initialize(mongodb, connect_timeout):
     global _db
     _db = _mongo.ceilometer
 
-    global _meter_db
-    _meter_db = _db.meter
-
-    global _resource_db
-    _resource_db = _db.resource
-
 
 def disconnect():
     if _mongo:
@@ -75,12 +67,10 @@ def disconnect():
         _mongo.close()
 
 
-def meter_db():
-    return _meter_db
-
-
-def resource_db():
-    return _resource_db
+def find(dbname, query, *args, **kwargs):
+    logger.debug("Mongo query: %s" % query)
+    db = getattr(_db, dbname)
+    return db.find(query, *args, **kwargs)
 
 
 def find_resources(project_id, meter, start=None, end=None):
@@ -122,8 +112,7 @@ def find_resources(project_id, meter, start=None, end=None):
         "_id": True
     }
 
-    logger.debug("Mongo query: %s" % query)
-    resources = _resource_db.find(query, projection=projection)
+    resources = find("resource", query, projection=projection)
     logger.debug("Got %d resources" % resources.count())
     ret = []
     for r in resources:

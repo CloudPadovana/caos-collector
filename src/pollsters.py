@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-27T15:57:32cest>
+# Time-stamp: <2016-07-29T12:17:48cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -185,18 +185,18 @@ class CPUPollster(Pollster):
         # left edge
         timestamp_query = {'$lte': start}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r1 = ceilometer.meter_db().find(query, projection).sort('timestamp', DESCENDING).limit(1)
+        r1 = ceilometer.find("meter", query, projection).sort('timestamp', DESCENDING).limit(1)
 
         # data
         timestamp_query = {'$gt': start,
                            '$lte': end}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r2 = ceilometer.meter_db().find(query, projection).sort('timestamp', ASCENDING)
+        r2 = ceilometer.find("meter", query, projection).sort('timestamp', ASCENDING)
 
         # right edge
         timestamp_query = {'$gt': end}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r3 = ceilometer.meter_db().find(query, projection).sort('timestamp', ASCENDING).limit(1)
+        r3 = ceilometer.find("meter", query, projection).sort('timestamp', ASCENDING).limit(1)
 
         # At this point, due to the way ceilometer stores information
         # about resources (even after find_resources()), some or all
