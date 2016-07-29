@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T12:43:19cest>
+# Time-stamp: <2016-07-29T12:43:50cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -72,7 +72,7 @@ class CeilometerPollster(Pollster):
     ceilometer_polling_period = None
 
     def __init__(self, counter_name, *args, **kwargs):
-        super(self.__class__, self).__init__(*args, **kwargs)
+        super(CeilometerPollster, self).__init__(*args, **kwargs)
 
         self.counter_name = counter_name
         self.ceilometer_polling_period = cfg.CEILOMETER_POLLING_PERIOD
@@ -105,7 +105,7 @@ class CeilometerPollster(Pollster):
 
         query_list.extend([
             ('project_id', self.project_id),
-            ('counter_name', self._COUNTER_NAME),
+            ('counter_name', self.counter_name),
             ('timestamp', timestamp_query),
             ('source', 'openstack')
         ])
@@ -130,8 +130,8 @@ class CeilometerPollster(Pollster):
         # ceilometer_polling_period. Then we interpolate according to
         # our period.
         timestamp_query = {
-            '$gte': start - datetime.timedelta(seconds=self.ceilometer_polling_period),
-            '$lte': end   + datetime.timedelta(seconds=self.ceilometer_polling_period)
+            '$gte': self.start - datetime.timedelta(seconds=self.ceilometer_polling_period),
+            '$lte': self.end   + datetime.timedelta(seconds=self.ceilometer_polling_period)
         }
 
         query = self.build_query(resources, timestamp_query=timestamp_query)
@@ -155,10 +155,8 @@ class CeilometerPollster(Pollster):
 
 
 class CPUPollster(CeilometerPollster):
-    _COUNTER_NAME = "cpu"
-
     def __init__(self, *args, **kwargs):
-        super(self.__class__, self).__init__(counter_name=self._COUNTER_NAME, *args, **kwargs)
+        super(CPUPollster, self).__init__(counter_name="cpu", *args, **kwargs)
 
     def interpolate_value(self, samples, timestamp, key):
         epoch = utils.EPOCH
