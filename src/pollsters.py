@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T12:41:52cest>
+# Time-stamp: <2016-07-29T12:42:53cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -173,57 +173,39 @@ class CPUPollster(CeilometerPollster):
         return ret
 
     def aggregate_values(self, resource_id, start, end, key):
-        # To capture a proper value for CPU time, we need to query the
-        # values between time 'start' (exclusive) and 'end'
-        # (inclusive). We also need to capture the two points at the
-        # edges to interpolate according to our period.
-        #
-        # Moreover, due to bug
-        # https://bugs.launchpad.net/ceilometer/+bug/1417949, caused
-        # by libvirt resetting the cputime on instance rebuild, we
-        # also need to correct the monotonicity of the samples.
-
         projection = {'timestamp': 1,
                       key: 1,
                       'resource_metadata.cpu_number': 1}
 
-        # left edge
-        timestamp_query = {'$lte': start}
-        query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r1 = ceilometer.find("meter", query, projection).sort('timestamp', DESCENDING).limit(1)
+        # To capture a proper value for CPU time, we need to query the
+        # values between time 'start' and 'end', plus a margin given
+        # by ceilometer_polling_period. Then we interpolate according
+        # to our period.
+        timestamp_query = {
+            '$gte': start - datetime.timedelta(seconds=self.ceilometer_polling_period),
+            '$lte': end   + datetime.timedelta(seconds=self.ceilometer_polling_period)
+        }
 
-        # data
-        timestamp_query = {'$gt': start,
-                           '$lte': end}
         query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r2 = ceilometer.find("meter", query, projection).sort('timestamp', ASCENDING)
-
-        # right edge
-        timestamp_query = {'$gt': end}
-        query = self.build_query(resource_id=resource_id, timestamp_query=timestamp_query)
-        r3 = ceilometer.find("meter", query, projection).sort('timestamp', ASCENDING).limit(1)
+        cursor = ceilometer.meter_db().find(query, projection).sort('timestamp', ASCENDING)
+        samples = list(cursor)
 
         # At this point, due to the way ceilometer stores information
-        # about resources (even after find_resources()), some or all
-        # of r1, r2, and r3 could be empty, possibly due to:
+        # about resources (even after find_resources()), data could be
+        # missing, possibly due to:
         #
         #   - the instance has not yet been created
         #   - the instance has been just started
         #   - the instance has just been deleted
         #   - meter data is missing (e.g. ceilometer has been stopped)
 
-        samples = []
-        if r1.count(with_limit_and_skip=True):
-            samples.append(r1[0])
-
-        if r2.count(with_limit_and_skip=True):
-            samples.extend(list(r2))
-
-        if r3.count(with_limit_and_skip=True):
-            samples.append(r3[0])
-
         if len(samples) < 2:
             return None
+
+        # NOTE: https://bugs.launchpad.net/ceilometer/+bug/1417949 Due
+        # to a bug caused by libvirt, which resets the cputime on
+        # instance rebuild, we also need to correct the monotonicity
+        # of the samples.
 
         samples = self.correct_monotonicity(samples, key=key)
 
