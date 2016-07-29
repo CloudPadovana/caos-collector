@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-27T17:07:23cest>
+# Time-stamp: <2016-07-29T11:42:39cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -50,8 +50,6 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 
 DEFAULT_CFG_FILE = '/etc/caos/collector.conf'
 
-DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
-
 
 log.setup_logger()
 logger = log.get_logger()
@@ -81,16 +79,16 @@ parser.add_argument('-f', '--force',
 
 
 def get_keystone_session():
-    os_envs = cfg.get_os_envs([
-        'username',
-        'password',
-        'auth_url',
-        'project_id',
-        'user_domain_id',
-    ])
+    os_envs = {
+        'username': cfg.KEYSTONE_USERNAME,
+        'password': cfg.KEYSTONE_PASSWORD,
+        'auth_url': cfg.KEYSTONE_AUTH_URL,
+        'project_id': cfg.KEYSTONE_PROJECT_ID,
+        'user_domain_id': cfg.KEYSTONE_USER_DOMAIN_ID
+    }
 
     auth = v3.Password(**os_envs)
-    return session.Session(auth=auth, verify=cfg.get('keystone', 'cacert'))
+    return session.Session(auth=auth, verify=cfg.KEYSTONE_CACERT)
 
 
 def update_projects(keystone_session):
@@ -119,7 +117,7 @@ def update_projects(keystone_session):
 
 def update_metrics():
     metrics = apistorage.metrics()
-    enabled_metrics = cfg.get_metrics()
+    enabled_metrics = cfg.METRICS
 
     for m in enabled_metrics:
         if m not in metrics:
@@ -130,7 +128,7 @@ def update_metrics():
 
 def update_series(projects, metrics):
     series = apistorage.series()
-    enabled_series = cfg.get_series()
+    enabled_series = cfg.SERIES
 
     for project_id in projects:
         for s in enabled_series:
@@ -263,7 +261,7 @@ def setup_scheduler(periods, force):
             'default': ThreadPoolExecutor(1)})
 
     # the special alive job
-    report_alive_period = cfg.get("scheduler", "report_alive_period", 'int')
+    report_alive_period = cfg.SCHEDULER_REPORT_ALIVE_PERIOD
     logger.info("Registering report_alive job every %ds " % report_alive_period)
     scheduler.add_job(func=report_alive,
 
@@ -290,7 +288,7 @@ def setup_scheduler(periods, force):
                       # trigger (pass None to add the job as paused)
                       next_run_time=datetime.datetime.utcnow())
 
-    misfire_grace_time = cfg.get("collector", "misfire_grace_time", "int")
+    misfire_grace_time = cfg.COLLECTOR_MISFIRE_GRACE_TIME
     for name in periods:
         period = periods[name]
         logger.info("Registering collect job for period %s (%ds)" %(name, period))
@@ -333,24 +331,19 @@ def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
     cfg.read(cfg_file)
-
-    mongodb = cfg.get('ceilometer', 'mongodb')
-    mongodb_connection_timeout = cfg.get('ceilometer', 'mongodb_connection_timeout',
-                                         'int', DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
+    cfg.dump()
 
     try:
-        ceilometer.initialize(mongodb, mongodb_connection_timeout)
+        ceilometer.initialize(cfg.CEILOMETER_MONGODB, cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
     except ceilometer.ConnectionError as e:
         logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
         sys.exit(1)
 
-    store_api_url = cfg.get('store', 'api-url')
-
-    apistorage.initialize(store_api_url)
+    apistorage.initialize(cfg.STORE_API_URL)
 
 
     # configure the scheduler
-    periods = cfg.get_periods()
+    periods = cfg.PERIODS
 
     force = args.force
     if force:

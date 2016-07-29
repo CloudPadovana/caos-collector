@@ -5,7 +5,7 @@
 #
 # Filename: cfg.py
 # Created: 2016-07-19T15:03:22+0200
-# Time-stamp: <2016-07-21T17:47:54cest>
+# Time-stamp: <2016-07-29T11:43:11cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -28,12 +28,91 @@
 
 import ConfigParser
 import os
+from pprint import pprint
+import sys
+
 
 import log
 logger = log.get_logger()
 
-
+# parsed config file
 _config = None
+
+# dict for custom cfg
+CFG = {}
+
+# options
+METRICS = None
+PERIODS = None
+SERIES = None
+
+KEYSTONE_USERNAME = None
+KEYSTONE_PASSWORD = None
+KEYSTONE_AUTH_URL = None
+KEYSTONE_PROJECT_ID = None
+KEYSTONE_USER_DOMAIN_ID = None
+KEYSTONE_CACERT = None
+
+SCHEDULER_REPORT_ALIVE_PERIOD = None
+
+COLLECTOR_MISFIRE_GRACE_TIME = None
+
+STORE_API_URL = None
+
+CEILOMETER_MONGODB = None
+CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
+
+# defaults
+DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
+
+
+def _parse_cfg():
+    _assign('METRICS', _get_metrics())
+    _assign('PERIODS', _get_periods())
+    _assign('SERIES', _get_series())
+
+    _assign('KEYSTONE_USERNAME', _get("keystone", "username"))
+    _assign('KEYSTONE_PASSWORD', _get("keystone", "password"))
+    _assign('KEYSTONE_AUTH_URL', _get("keystone", "auth_url"))
+    _assign('KEYSTONE_PROJECT_ID', _get("keystone", "project_id"))
+    _assign('KEYSTONE_USER_DOMAIN_ID', _get("keystone", "user_domain_id"))
+    _assign('KEYSTONE_CACERT', _get("keystone", "cacert"))
+
+    # [scheduler]
+    _assign('SCHEDULER_REPORT_ALIVE_PERIOD',
+            _get("scheduler", "report_alive_period", 'int'))
+
+    # [collector]
+    _assign('COLLECTOR_MISFIRE_GRACE_TIME',
+            _get("collector", "misfire_grace_time", "int"))
+
+    # [store]
+    _assign('STORE_API_URL', _get('store', 'api-url'))
+
+    # [ceilometer]
+    _assign('CEILOMETER_MONGODB', _get('ceilometer', 'mongodb'))
+    _assign('CEILOMETER_MONGODB_CONNECTION_TIMEOUT',
+            _get('ceilometer', 'mongodb_connection_timeout',
+                 'int', DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT))
+
+
+def dump():
+    pprint({'CFG': CFG})
+
+
+def _assign(name, value):
+    CFG[name] = value
+
+    module = sys.modules[__name__]
+
+    if not hasattr(module, name):
+        raise Exception("cfg option %s not defined" % name)
+
+    if getattr(module, name) is not None:
+        raise Exception("redefining cfg option %s" % name)
+
+    setattr(module, name, value)
+    return value
 
 
 def read(cfg_file):
@@ -53,8 +132,10 @@ def read(cfg_file):
     _config = ConfigParser.RawConfigParser()
     _config.read(fname)
 
+    _parse_cfg()
 
-def get(section, option=None, type='str', default=None):
+
+def _get(section, option=None, type='str', default=None):
     if not _config.has_section(section) and section != "DEFAULT" and not default:
         raise RuntimeError("No [%s] section in config file." % section)
 
@@ -74,30 +155,27 @@ def get(section, option=None, type='str', default=None):
     return fun(section, option)
 
 
-def get_os_envs(opts):
-    return dict((opt, get("keystone", opt)) for opt in opts)
-
-
-def get_metrics():
+# FIXME: in the future the following structs should be queried from caos-api
+def _get_metrics():
     ret = {}
     for s in _config.sections():
         PREFIX = 'metric/'
         if s.startswith(PREFIX):
             _, name = s.split('/')
             ret[name] = {
-                "type": get(s, 'type')
+                "type": _get(s, 'type')
             }
     return ret
 
 
-def get_periods():
-    periods = get('periods')
-    return dict((p, get('periods', p, 'int')) for p in periods)
+def _get_periods():
+    periods = _get('periods')
+    return dict((p, _get('periods', p, 'int')) for p in periods)
 
 
-def get_series():
-    periods = get_periods()
-    metrics = get_metrics()
+def _get_series():
+    periods = _get_periods()
+    metrics = _get_metrics()
 
     ret = []
     for s in _config.sections():
@@ -107,5 +185,5 @@ def get_series():
             ret.append({
                 "metric_name": metric_name,
                 "period": periods[period],
-                "ttl": get(s, 'ttl', 'int')})
+                "ttl": _get(s, 'ttl', 'int')})
     return ret
