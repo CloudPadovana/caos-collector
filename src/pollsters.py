@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T12:19:20cest>
+# Time-stamp: <2016-07-29T12:38:02cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -48,7 +48,7 @@ class Pollster(object):
     series_id = None
     start = None
     end = None
-    time_range_margin = 0
+    ceilometer_polling_period = None
 
     def __init__(self, series, start, end):
         self.project_id = series['project_id']
@@ -69,7 +69,7 @@ class Pollster(object):
 
 
     def find_resources(self, meter):
-        start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period
+        start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period)
         end = self.end + datetime.timedelta(seconds=self.ceilometer_polling_period)
 
         resources = ceilometer.find_resources(project_id=self.project_id,
