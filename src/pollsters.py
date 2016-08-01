@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-07-29T13:04:34cest>
+# Time-stamp: <2016-08-01T10:31:10cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -60,6 +60,10 @@ class Pollster(object):
 
     def run(self, force_overwrite=False):
         value = self.measure()
+        if not value:
+            logger.debug("Skipping null sample")
+            return None
+
         sample = caos_api.add_sample(series_id=self.series_id,
                                      timestamp=self.end,
                                      value=value,
@@ -114,6 +118,11 @@ class CeilometerPollster(Pollster):
         return query
 
     def measure(self):
+        # first test ceilometer_polling_period time guard
+        now = datetime.datetime.utcnow()
+        if now < self.end + datetime.timedelta(seconds=self.ceilometer_polling_period):
+            return None
+
         resources = self.find_resources()
 
         counter_key = 'counter_volume'
