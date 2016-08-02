@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-07-29T15:05:19cest>
+# Time-stamp: <2016-08-02T16:58:35cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -350,8 +350,8 @@ def main():
     cfg.dump()
     log.setup_file_handlers()
 
+    cfg.CFG['force'] = None
     force = args.force
-    cfg.CFG['force'] = force
     if force:
         logger.info("FORCE COLLECTION ENABLED")
         logger.warn("FORCE WILL OVERWRITE EXISTING DATA!!!!")
@@ -372,6 +372,7 @@ def main():
     periods = cfg.PERIODS
 
     # handle shots
+    cfg.CFG['shot'] = None
     shot_arg = args.shot
     if shot_arg:
         logger.info("SHOT %s", shot_arg)
