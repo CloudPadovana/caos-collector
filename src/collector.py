@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-08-02T16:58:35cest>
+# Time-stamp: <2016-08-02T17:33:47cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -31,6 +31,7 @@ import datetime
 import os
 import sys
 import signal
+import StringIO
 
 from _version import __version__
 import caos_api
@@ -158,8 +159,13 @@ def collect_real(metric_name, series, start, end, force):
     return sample
 
 
-def report_alive():
+def report_alive(scheduler):
     logger.info("Collector is alive")
+
+    output = StringIO.StringIO()
+    scheduler.print_jobs(out=output)
+    logger.info(output.getvalue())
+    output.close()
 
 
 def collect(period_name, period, misfire_grace_time):
@@ -286,6 +292,9 @@ def setup_scheduler(periods):
                       seconds=report_alive_period,
 
                       name="report_alive",
+                      kwargs={
+                          "scheduler": scheduler,
+                      },
 
                       # seconds after the designated runtime that
                       # the job is still allowed to be run
