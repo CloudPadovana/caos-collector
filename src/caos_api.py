@@ -5,7 +5,7 @@
 #
 # Filename: caos_api.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-07-29T12:48:21cest>
+# Time-stamp: <2016-08-03T17:29:34cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -161,10 +161,10 @@ def create_series(project_id, metric_name, period):
 
     return post('series', data)
 
-def series_grid(series_id, start_date=None):
+def series_grid(series_id, from_date=None):
     params = {}
-    if start_date:
-        params['start_date'] = utils.format_date(start_date)
+    if from_date:
+        params['from'] = utils.format_date(from_date)
 
     r = get('series/%d/grid' % series_id, params=params)['grid']
     return list(utils.parse_date(v) for v in r)

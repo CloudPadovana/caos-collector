@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-08-02T17:33:47cest>
+# Time-stamp: <2016-08-03T17:29:54cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -239,7 +239,7 @@ def collect(period_name, period, misfire_grace_time):
 
             # ask for the time grid
             time_grid = caos_api.series_grid(series_id=series_id,
-                                             start_date=next_timestamp)
+                                             from_date=next_timestamp)
 
             if shot:
                 N = shot['N']
