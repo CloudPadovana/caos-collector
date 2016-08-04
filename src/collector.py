@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-08-03T17:29:54cest>
+# Time-stamp: <2016-08-04T18:28:28cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -68,15 +68,37 @@ parser.add_argument('-c', '--config',
                     default=DEFAULT_CFG_FILE,
                     help='configuration file')
 
-parser.add_argument('-s', '--shot',
-                    dest='shot', metavar=('TIMESTAMP', 'N', 'PERIOD', 'METRIC'),
-                    nargs=4,
-                    help='Perform multiple (N) shot collection of METRIC from TIMESTAMP with period PERIOD')
-
 parser.add_argument('-f', '--force',
                     action='store_const',
                     const=True,
                     help='Enable overwriting existing samples.')
+
+subparsers = parser.add_subparsers(dest="cmd",
+                                   help='sub commands')
+
+parser_run = subparsers.add_parser('run', help='run scheduled collection')
+
+parser_shot = subparsers.add_parser('shot', help='shot collection')
+
+parser_shot.add_argument('-s', '--start',
+                         dest='start', metavar='TIMESTAMP',
+                         nargs=1,
+                         help='Perform shot collection from TIMESTAMP')
+
+parser_shot.add_argument('-m', '--metric',
+                         dest='metric', metavar='METRIC',
+                         nargs='?', default='ALL',
+                         help='Collect only metric METRIC')
+
+parser_shot.add_argument('-p', '--period',
+                         dest='period', metavar='PERIOD',
+                         nargs='?', default='ALL',
+                         help='Collect only period PERIOD')
+
+parser_shot.add_argument('-r', '--repeat',
+                         dest='repeat', metavar='N',
+                         nargs='?', default=1,
+                         help='Repeat N times')
 
 
 def get_keystone_session():
@@ -218,8 +240,8 @@ def collect(period_name, period, misfire_grace_time):
                 last_timestamp = utils.EPOCH
 
             if shot:
-                logger.info("Doing %d shots starting at %s for project %s, metric %s, period %d", shot['N'], shot['timestamp'], project_id, metric_name, period)
-                next_timestamp = shot['timestamp']
+                logger.info("Doing %d shots starting at %s for project %s, metric %s, period %d", shot['N'], shot['start'], project_id, metric_name, period)
+                next_timestamp = shot['start']
             else:
                 next_timestamp = last_timestamp + datetime.timedelta(seconds=period)
 
@@ -352,6 +374,41 @@ def setup_scheduler(periods):
     return scheduler
 
 
+def run_shot(args):
+    logger.info("SHOT %s", args)
+    shot = {}
+
+    if args.start is None:
+        shot['start'] = datetime.datetime.utcnow()
+    else:
+        shot['start'] = utils.parse_date(args.start)
+
+    shot['N'] = int(args.repeat)
+    shot['period'] = args.period
+    shot['metric'] = args.metric
+
+    assert(shot['N'] > 0)
+    cfg.CFG['shot'] = shot
+
+    periods = cfg.PERIODS
+
+    shot_period = shot['period']
+    if shot_period != 'ALL':
+        if not shot_period in periods:
+            logger.error("Unknown shot period %s (use ALL or one of %s)" % (shot_period, periods.keys()))
+            sys.exit(1)
+        periods = {shot_period: periods[shot_period]}
+
+    for name in periods:
+        period = periods[name]
+        kwargs={
+            "period_name": name,
+            "period": period,
+            "misfire_grace_time": None
+        }
+
+        collect_job(**kwargs)
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
@@ -376,43 +433,15 @@ def main():
 
     caos_api.initialize(cfg.CAOS_API_URL)
 
-
-    # configure the scheduler
-    periods = cfg.PERIODS
-
-    # handle shots
     cfg.CFG['shot'] = None
-    shot_arg = args.shot
-    if shot_arg:
-        logger.info("SHOT %s", shot_arg)
-        shot = {
-            'timestamp': utils.parse_date(shot_arg[0]),
-            'N': int(shot_arg[1]),
-            'period': shot_arg[2],
-            'metric': shot_arg[3]
-        }
-        assert(shot['N'])
-        cfg.CFG['shot'] = shot
+    cmd = args.cmd
+    if cmd == 'shot':
+        run_shot(args)
+        sys.exit(0)
 
-        shot_period = shot['period']
-        if shot_period != 'ALL':
-            if not shot_period in periods:
-                logger.error("Unknown shot period %s (use ALL or one of %s)" % (shot_period, periods.keys()))
-                sys.exit(1)
-            periods = {shot_period: periods[shot_period]}
+    assert(cmd == 'run')
 
-        for name in periods:
-            period = periods[name]
-            kwargs={
-                "period_name": name,
-                "period": period,
-                "misfire_grace_time": None
-            }
-
-            collect_job(**kwargs)
-
-        return
-
+    periods = cfg.PERIODS
     scheduler = setup_scheduler(periods=periods)
 
     def sigterm_handler(_signo, _stack_frame):
