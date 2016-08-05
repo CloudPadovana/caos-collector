@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-08-04T18:28:28cest>
+# Time-stamp: <2016-08-05T09:54:16cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -39,6 +39,8 @@ import ceilometer
 import log
 import utils
 import cfg
+import pollsters
+
 
 from keystoneclient.auth.identity import v3
 from keystoneauth1 import session
@@ -177,16 +179,10 @@ def update_series(projects, metrics):
                                        period=period)
 
 
-from pollsters import CPUPollster
-pollsters = {
-    'cpu': CPUPollster
-}
-
-
 def collect_real(metric_name, series, start, end, force):
     logger.info("Collecting from %s to %s", start, end)
 
-    pollster = pollsters[metric_name]
+    pollster = pollsters.get_pollster(metric_name)
     pollster_instance = pollster(series=series, start=start, end=end)
     sample = pollster_instance.run(force)
     return sample

@@ -234,3 +234,11 @@ class CPUPollster(CeilometerPollster):
         return value
 
 
+
+_pollsters = {
+    'cpu': CPUPollster
+}
+
+def get_pollster(metric):
+    return _pollsters[metric]
+
