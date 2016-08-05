@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-08-02T16:58:35cest>
+# Time-stamp: <2016-08-05T13:44:43cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -358,6 +358,8 @@ def main():
         answer = raw_input("Are you sure? Type YES (uppercase) to go on: ")
         if not answer == "YES":
             return
+        else:
+            cfg.CFG['force'] = force
 
     try:
         ceilometer.initialize(cfg.CEILOMETER_MONGODB, cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
