@@ -197,6 +197,16 @@ class CeilometerPollster(Pollster):
         return y0
 
 
+    @staticmethod
+    def flatten_mongo_data(d):
+        if type(d) is dict:
+            return dict(utils.flattenDict(d, join=lambda a,b: a+'.'+b))
+        elif type(d) is list:
+            return list(dict(utils.flattenDict(x, join=lambda a,b: a+'.'+b)) for x in d)
+        else:
+            raise RuntimeError("Don't know how to handle %s" % type(d))
+
+
 class CPUPollster(CeilometerPollster):
     def __init__(self, *args, **kwargs):
         super(CPUPollster, self).__init__(*args, **kwargs)
