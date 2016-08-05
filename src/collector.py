@@ -82,23 +82,28 @@ parser_shot = subparsers.add_parser('shot', help='shot collection')
 
 parser_shot.add_argument('-s', '--start',
                          dest='start', metavar='TIMESTAMP',
-                         nargs=1,
-                         help='Perform shot collection from TIMESTAMP')
-
-parser_shot.add_argument('-m', '--metric',
-                         dest='metric', metavar='METRIC',
-                         nargs='?', default='ALL',
-                         help='Collect only metric METRIC')
-
-parser_shot.add_argument('-p', '--period',
-                         dest='period', metavar='PERIOD',
-                         nargs='?', default='ALL',
-                         help='Collect only period PERIOD')
+                         nargs='?',
+                         default=utils.format_date(datetime.datetime.utcnow()),
+                         help='Perform shot collection from TIMESTAMP (default to now)')
 
 parser_shot.add_argument('-r', '--repeat',
                          dest='repeat', metavar='N',
-                         nargs='?', default=1,
-                         help='Repeat N times')
+                         nargs='?',
+                         default=1,
+                         help='Repeat N times (default to 1)')
+
+parser_shot.add_argument('-m', '--metric',
+                         dest='metric', metavar='METRIC',
+                         nargs='?',
+                         default='ALL',
+                         help='Collect only metric METRIC (default to ALL)')
+
+parser_shot.add_argument('-p', '--period',
+                         dest='period', metavar='PERIOD',
+                         nargs='?',
+                         default='ALL',
+                         help='Collect only period PERIOD (default to ALL)')
+
 
 
 def get_keystone_session():
@@ -376,16 +381,12 @@ def setup_scheduler(periods):
 
 def run_shot(args):
     logger.info("SHOT %s", args)
-    shot = {}
-
-    if args.start is None:
-        shot['start'] = datetime.datetime.utcnow()
-    else:
-        shot['start'] = utils.parse_date(args.start)
-
-    shot['N'] = int(args.repeat)
-    shot['period'] = args.period
-    shot['metric'] = args.metric
+    shot = {
+        'start': utils.parse_date(args.start),
+        'N': int(args.repeat),
+        'period': args.period,
+        'metric': args.metric
+    }
 
     assert(shot['N'] > 0)
     cfg.CFG['shot'] = shot
