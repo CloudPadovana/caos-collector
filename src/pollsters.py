@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-08-01T10:31:10cest>
+# Time-stamp: <2016-08-05T09:57:40cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -60,7 +60,7 @@ class Pollster(object):
 
     def run(self, force_overwrite=False):
         value = self.measure()
-        if not value:
+        if value is None:
             logger.debug("Skipping null sample")
             return None
 
@@ -158,6 +158,9 @@ class CeilometerPollster(Pollster):
                 continue
 
             values.append(v)
+
+        if not len(values):
+            return None
 
         value = self.aggregate_values(values)
         return value
