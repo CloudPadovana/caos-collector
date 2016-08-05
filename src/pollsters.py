@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-08-05T09:59:10cest>
+# Time-stamp: <2016-08-05T14:58:02cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -168,6 +168,9 @@ class CeilometerPollster(Pollster):
         cursor = ceilometer.find("meter", query, projection).sort('timestamp', ASCENDING)
         allsamples = list(cursor)
 
+        if '.' in self._counter_value_field():
+            allsamples = self.flatten_mongo_data(allsamples)
+
         values = []
         for resource_id in resources:
             logger.debug("Aggregating %s for resource %s" % (self.metric_name, resource_id))
@@ -278,9 +281,63 @@ class CPUPollster(CeilometerPollster):
         return value
 
 
+class WallClockTimePollster(CeilometerPollster):
+    def __init__(self, *args, **kwargs):
+        super(WallClockTimePollster, self).__init__(*args, **kwargs)
+
+    def _counter_name(self):
+        return "instance"
+
+    def _counter_value_field(self):
+        return "resource_metadata.vcpus"
+
+    def _projection(self):
+        projection = {
+            # 'resource_metadata.flavor.disk': 1,
+            # 'resource_metadata.flavor.ephemeral': 1,
+            # 'resource_metadata.flavor.ram': 1,
+            # 'resource_metadata.flavor.vcpus': 1,
+            'resource_metadata.status': 1,
+            'resource_metadata.vcpus': 1
+        }
+        return projection
+
+    def _samples_query(self):
+        # instance samples are mixed with audit notification but we
+        # can filter over resource_metadata.status == active (audit
+        # notification on the other hand have the field
+        # resource_metadata.state
+
+        return [
+            ('resource_metadata.status', 'active')
+        ]
+
+    def aggregate_resource(self, samples, key):
+        if len(samples) < 2:
+            return None
+
+        # the integral
+        I = self.integrate_value(samples, key=key)
+
+        # fake samples at start and end
+        s1 = samples[0]
+        s2 = samples[-1]
+        s1[key] = 0
+        s2[key] = I
+
+        v1 = self.interpolate_value([s1, s2], timestamp=self.start, key=key)
+        v2 = self.interpolate_value([s1, s2], timestamp=self.end, key=key)
+
+        ret = v2-v1
+        return ret
+
+    def aggregate_values(self, values):
+        value = sum(values)
+        return value
 
 _pollsters = {
-    'cpu': CPUPollster
+    'cpu': CPUPollster,
+    'wallclocktime': WallClockTimePollster
 }
 
 def get_pollster(metric):
