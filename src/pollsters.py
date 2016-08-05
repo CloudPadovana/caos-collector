@@ -186,7 +186,8 @@ class CeilometerPollster(Pollster):
         value = self.aggregate_values(values)
         return value
 
-    def interpolate_value(self, samples, timestamp, key):
+    @staticmethod
+    def interpolate_value(samples, timestamp, key):
         epoch = utils.EPOCH
 
         x = list((s['timestamp']-epoch).total_seconds() for s in samples)
