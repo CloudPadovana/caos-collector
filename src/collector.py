@@ -92,6 +92,12 @@ parser_shot.add_argument('-r', '--repeat',
                          default=1,
                          help='Repeat N times (default to 1)')
 
+parser_shot.add_argument('-P', '--project',
+                         dest='project', metavar='PROJECT',
+                         nargs='?',
+                         default='ALL',
+                         help='Collect only project PROJECT (default to ALL)')
+
 parser_shot.add_argument('-m', '--metric',
                          dest='metric', metavar='METRIC',
                          nargs='?',
@@ -216,6 +222,13 @@ def collect(period_name, period, misfire_grace_time):
                 logger.error("Unknown shot metric %s (use ALL or one of %s)" % (shot_metric, metrics.keys()))
                 sys.exit(1)
             metrics = {shot_metric: metrics[shot_metric]}
+
+        shot_project = shot['project']
+        if shot_project != 'ALL':
+            if not shot_project in projects:
+                logger.error("Unknown shot project %s (use ALL or one of %s)" % (shot_project, projects.keys()))
+                sys.exit(1)
+            projects = {shot_project: shot_project}
 
     # update the series (in case a new project has been added)
     update_series(projects, metrics)
@@ -384,6 +397,7 @@ def run_shot(args):
     shot = {
         'start': utils.parse_date(args.start),
         'N': int(args.repeat),
+        'project': args.project,
         'period': args.period,
         'metric': args.metric
     }
