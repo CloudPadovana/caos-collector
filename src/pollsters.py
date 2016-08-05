@@ -5,7 +5,7 @@
 #
 # Filename: pollster.py
 # Created: 2016-07-12T12:56:39+0200
-# Time-stamp: <2016-08-05T09:57:40cest>
+# Time-stamp: <2016-08-05T09:59:10cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -75,11 +75,35 @@ class CeilometerPollster(Pollster):
     counter_name = None
     ceilometer_polling_period = None
 
-    def __init__(self, counter_name, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(CeilometerPollster, self).__init__(*args, **kwargs)
 
-        self.counter_name = counter_name
+        self.counter_name = self._counter_name()
         self.ceilometer_polling_period = cfg.CEILOMETER_POLLING_PERIOD
+
+    def _counter_name(self):
+        raise NotImplementedError
+
+    def _counter_value_field(self):
+        return "counter_volume"
+
+    def _projection(self):
+        # by default do not project fields (i.e. return everything)
+        return None
+
+    def build_projection(self):
+        projection = self._projection()
+        if projection is not None:
+            # we want to reduce fields, so let's start with what we surely need
+            projection.update({
+                'resource_id': 1,
+                'timestamp': 1,
+                self._counter_value_field(): 1
+            })
+        return projection
+
+    def _samples_query(self):
+        return []
 
     def find_resources(self):
         start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period)
@@ -114,6 +138,8 @@ class CeilometerPollster(Pollster):
             ('source', 'openstack')
         ])
 
+        query_list.extend(self._samples_query())
+
         query = SON(query_list)
         return query
 
@@ -125,14 +151,8 @@ class CeilometerPollster(Pollster):
 
         resources = self.find_resources()
 
-        counter_key = 'counter_volume'
-
-        # find samples
-        projection = {
-            'resource_id': 1,
-            'timestamp': 1,
-            counter_key: 1
-        }
+        # compute projection
+        projection = self.build_projection()
 
         # To capture a proper value, we need to query the values
         # between time 'start' and 'end', plus a margin given by
@@ -143,6 +163,7 @@ class CeilometerPollster(Pollster):
             '$lte': self.end   + datetime.timedelta(seconds=self.ceilometer_polling_period)
         }
 
+        # find samples
         query = self.build_query(resources, timestamp_query=timestamp_query)
         cursor = ceilometer.find("meter", query, projection).sort('timestamp', ASCENDING)
         allsamples = list(cursor)
@@ -152,7 +173,7 @@ class CeilometerPollster(Pollster):
             logger.debug("Aggregating %s for resource %s" % (self.metric_name, resource_id))
 
             samples = list(s for s in allsamples if s['resource_id'] == resource_id)
-            v = self.aggregate_resource(samples, key=counter_key)
+            v = self.aggregate_resource(samples, key=self._counter_value_field())
             if v is None:
                 logger.debug("Missing %s data for resource %s" % (self.metric_name, resource_id))
                 continue
@@ -165,11 +186,6 @@ class CeilometerPollster(Pollster):
         value = self.aggregate_values(values)
         return value
 
-
-class CPUPollster(CeilometerPollster):
-    def __init__(self, *args, **kwargs):
-        super(CPUPollster, self).__init__(counter_name="cpu", *args, **kwargs)
-
     def interpolate_value(self, samples, timestamp, key):
         epoch = utils.EPOCH
 
@@ -179,6 +195,14 @@ class CPUPollster(CeilometerPollster):
         x0 = (timestamp-epoch).total_seconds()
         y0 = utils.interp(x, y, x0)
         return y0
+
+
+class CPUPollster(CeilometerPollster):
+    def __init__(self, *args, **kwargs):
+        super(CPUPollster, self).__init__(*args, **kwargs)
+
+    def _counter_name(self):
+        return "cpu"
 
     def correct_monotonicity(self, items, key):
         # From the information we have, we just check if some value is
