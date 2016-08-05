@@ -196,6 +196,15 @@ class CeilometerPollster(Pollster):
         y0 = utils.interp(x, y, x0)
         return y0
 
+    @staticmethod
+    def integrate_value(samples, key):
+        epoch = utils.EPOCH
+
+        x = list((s['timestamp']-epoch).total_seconds() for s in samples)
+        y = list(s[key] for s in samples)
+
+        I = utils.integrate(x, y)
+        return I
 
     @staticmethod
     def flatten_mongo_data(d):

@@ -5,7 +5,7 @@
 #
 # Filename: utils.py
 # Created: 2016-07-19T12:48:44+0200
-# Time-stamp: <2016-08-05T12:48:05cest>
+# Time-stamp: <2016-08-05T14:46:58cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -55,6 +55,10 @@ def interp(x, y, x0, left=None, right=None):
 
     y0 = numpy.interp(x0, x, y, left=left, right=right)
     return y0
+
+def integrate(x, y):
+    return numpy.trapz(x=x, y=y)
+
 
 ### Flat dict
 # Taken from http://stackoverflow.com/questions/6027558/flatten-nested-python-dictionaries-compressing-keys
