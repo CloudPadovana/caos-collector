@@ -304,6 +304,18 @@ def collect(period_name, period, misfire_grace_time):
 
 def collect_job(*args, **kwargs):
     try:
+        ok = refresh_token()
+    except caos_api.ConnectionError as e:
+        logger.warn("API connection problems: %s. Retrying at next polling time.", e)
+        return
+    except caos_api.AuthError as e:
+        logger.warn("API auth problems: %s. Retrying at next polling time.", e)
+        return
+    if not ok:
+        logger.warn("API auth problems. Retrying at next polling time.")
+        return
+
+    try:
         collect(*args, **kwargs)
     except ceilometer.ConnectionError as e:
         logger.warn("Got mongo connection problems: %s. Retrying at next polling time.", e)
