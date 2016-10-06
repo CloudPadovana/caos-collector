@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-08-05T13:45:47cest>
+# Time-stamp: <2016-10-06T17:19:16cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -457,6 +457,26 @@ def main():
     cfg.dump()
     log.setup_file_handlers()
 
+    caos_api.initialize(cfg.CAOS_API_URL)
+    try:
+        logger.info("Checking API connectivity...")
+        status = caos_api.status()
+        logger.info("API version %s is in status '%s'", status['version'], status['status'])
+    except caos_api.ConnectionError as e:
+        logger.error("Cannot connect to API. Exiting....")
+        sys.exit(1)
+
+    try:
+        logger.info("Checking API auth...")
+        ok = refresh_token()
+        if not ok:
+            logger.error("Cannot authenticate to API: %s. Exiting...")
+            sys.exit(1)
+    except caos_api.AuthError as e:
+        logger.error("Cannot authenticate to API: %s. Exiting...", e)
+        sys.exit(1)
+
+
     cfg.CFG['force'] = None
     force = args.force
     if force:
@@ -474,13 +494,12 @@ def main():
         logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
         sys.exit(1)
 
-    caos_api.initialize(cfg.CAOS_API_URL)
-
     cfg.CFG['shot'] = None
     cmd = args.cmd
     if cmd == 'shot':
         run_shot(args)
         sys.exit(0)
+    assert(cmd != 'shot')
 
     assert(cmd == 'run')
 
