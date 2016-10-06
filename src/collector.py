@@ -420,6 +420,24 @@ def run_shot(args):
 
         collect_job(**kwargs)
 
+
+def refresh_token():
+    logger.info("Refreshing token...")
+    token = caos_api.token(username=cfg.CAOS_API_USERNAME,
+                           password=cfg.CAOS_API_PASSWORD)
+    logger.info("Got new token")
+
+    caos_api.set_token(token)
+    status = caos_api.status()
+    logger.info("API version %s is in status '%s'", status['version'], status['status'])
+    s = status['auth'] == "yes"
+    if s:
+        logger.info("API auth is OK")
+    else:
+        logger.error("Error with API auth")
+    return s
+
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file

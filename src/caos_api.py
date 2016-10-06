@@ -35,13 +35,23 @@ import utils
 logger = log.get_logger()
 
 
-_caos_api_url = None
+class AuthError(Exception):
+    pass
 
+
+_caos_api_url = None
+_token = None
 
 def initialize(caos_api_url):
     global _caos_api_url
 
     _caos_api_url = caos_api_url
+
+def set_token(token):
+    global _token
+
+    _token = token
+
 
 def _request(rest_type, api, data=None, params=None):
     fun = getattr(requests, rest_type)
@@ -63,6 +73,22 @@ def put(api, data):
 
 def post(api, data, request='post'):
     return _request(request, api, data)
+
+def status():
+    return get('status')
+
+def token(username, password):
+    params = {
+        'username': username,
+        'password': password
+    }
+
+    data = get('token', params=params)
+    if not data or not 'token' in data:
+        raise AuthError("No token returned")
+
+    token = data['token']
+    return token
 
 def projects():
     projects = get('projects')
