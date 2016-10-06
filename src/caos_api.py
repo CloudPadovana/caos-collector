@@ -5,7 +5,7 @@
 #
 # Filename: caos_api.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-08-03T17:29:34cest>
+# Time-stamp: <2016-10-06T17:13:23cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -34,19 +34,42 @@ import utils
 
 logger = log.get_logger()
 
+class ConnectionError(Exception):
+    pass
+
+class AuthError(Exception):
+    pass
+
+class JWTAuth(requests.auth.AuthBase):
+    def __call__(self, r):
+        r.headers['Authorization'] = "Bearer %s" % _token
+        return r
+__jwt_auth = JWTAuth()
 
 _caos_api_url = None
-
+_token = None
 
 def initialize(caos_api_url):
     global _caos_api_url
 
     _caos_api_url = caos_api_url
 
+def set_token(token):
+    global _token
+
+    _token = token
+
+
 def _request(rest_type, api, data=None, params=None):
     fun = getattr(requests, rest_type)
     url = "%s/%s" % (_caos_api_url, api)
-    r = fun(url, json=data, params=params)
+
+    r = None
+    try:
+        r = fun(url, json=data, params=params, auth=__jwt_auth)
+    except requests.exceptions.ConnectionError as e:
+        raise ConnectionError(e)
+
     logger.debug("REST request: %s %s params=%s json=%s" % (rest_type, url, params, data))
     json = r.json()
     logger.debug("REST status: %s json=%s", r.status_code, json)
@@ -63,6 +86,22 @@ def put(api, data):
 
 def post(api, data, request='post'):
     return _request(request, api, data)
+
+def status():
+    return get('status')
+
+def token(username, password):
+    params = {
+        'username': username,
+        'password': password
+    }
+
+    data = get('token', params=params)
+    if not data or not 'token' in data:
+        raise AuthError("No token returned")
+
+    token = data['token']
+    return token
 
 def projects():
     projects = get('projects')

@@ -5,7 +5,7 @@
 #
 # Filename: collector.py
 # Created: 2016-06-29T14:32:26+0200
-# Time-stamp: <2016-08-05T13:45:47cest>
+# Time-stamp: <2016-10-06T17:19:16cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -304,6 +304,18 @@ def collect(period_name, period, misfire_grace_time):
 
 def collect_job(*args, **kwargs):
     try:
+        ok = refresh_token()
+    except caos_api.ConnectionError as e:
+        logger.warn("API connection problems: %s. Retrying at next polling time.", e)
+        return
+    except caos_api.AuthError as e:
+        logger.warn("API auth problems: %s. Retrying at next polling time.", e)
+        return
+    if not ok:
+        logger.warn("API auth problems. Retrying at next polling time.")
+        return
+
+    try:
         collect(*args, **kwargs)
     except ceilometer.ConnectionError as e:
         logger.warn("Got mongo connection problems: %s. Retrying at next polling time.", e)
@@ -420,12 +432,50 @@ def run_shot(args):
 
         collect_job(**kwargs)
 
+
+def refresh_token():
+    logger.info("Refreshing token...")
+    token = caos_api.token(username=cfg.CAOS_API_USERNAME,
+                           password=cfg.CAOS_API_PASSWORD)
+    logger.info("Got new token")
+
+    caos_api.set_token(token)
+    status = caos_api.status()
+    logger.info("API version %s is in status '%s'", status['version'], status['status'])
+    s = status['auth'] == "yes"
+    if s:
+        logger.info("API auth is OK")
+    else:
+        logger.error("Error with API auth")
+    return s
+
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
     cfg.read(cfg_file)
     cfg.dump()
     log.setup_file_handlers()
+
+    caos_api.initialize(cfg.CAOS_API_URL)
+    try:
+        logger.info("Checking API connectivity...")
+        status = caos_api.status()
+        logger.info("API version %s is in status '%s'", status['version'], status['status'])
+    except caos_api.ConnectionError as e:
+        logger.error("Cannot connect to API. Exiting....")
+        sys.exit(1)
+
+    try:
+        logger.info("Checking API auth...")
+        ok = refresh_token()
+        if not ok:
+            logger.error("Cannot authenticate to API: %s. Exiting...")
+            sys.exit(1)
+    except caos_api.AuthError as e:
+        logger.error("Cannot authenticate to API: %s. Exiting...", e)
+        sys.exit(1)
+
 
     cfg.CFG['force'] = None
     force = args.force
@@ -444,13 +494,12 @@ def main():
         logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
         sys.exit(1)
 
-    caos_api.initialize(cfg.CAOS_API_URL)
-
     cfg.CFG['shot'] = None
     cmd = args.cmd
     if cmd == 'shot':
         run_shot(args)
         sys.exit(0)
+    assert(cmd != 'shot')
 
     assert(cmd == 'run')
 

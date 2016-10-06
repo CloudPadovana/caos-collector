@@ -5,7 +5,7 @@
 #
 # Filename: cfg.py
 # Created: 2016-07-19T15:03:22+0200
-# Time-stamp: <2016-07-29T14:51:19cest>
+# Time-stamp: <2016-10-06T15:33:19cest>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -61,6 +61,8 @@ COLLECTOR_LOG_ROTATE_BYTES = None
 COLLECTOR_LOG_ROTATE_COUNT = None
 
 CAOS_API_URL = None
+CAOS_API_USERNAME = None
+CAOS_API_PASSWORD = None
 
 CEILOMETER_MONGODB = None
 CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
@@ -103,6 +105,8 @@ def _parse_cfg():
 
     # [caos-api]
     _assign('CAOS_API_URL', _get('caos-api', 'api_url'))
+    _assign('CAOS_API_USERNAME', _get('caos-api', 'username'))
+    _assign('CAOS_API_PASSWORD', _get('caos-api', 'password'))
 
     # [ceilometer]
     _assign('CEILOMETER_MONGODB', _get('ceilometer', 'mongodb'))
