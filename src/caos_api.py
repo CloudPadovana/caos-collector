@@ -5,7 +5,7 @@
 #
 # Filename: caos_api.py
 # Created: 2016-07-01T10:09:26+0200
-# Time-stamp: <2016-10-06T17:13:23cest>
+# Time-stamp: <2016-11-04T11:52:50cet>
 # Author: Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>
 #
 # Copyright © 2016 by Fabrizio Chiarello
@@ -96,7 +96,7 @@ def token(username, password):
         'password': password
     }
 
-    data = get('token', params=params)
+    data = post('token', data=params)
     if not data or not 'token' in data:
         raise AuthError("No token returned")
 
