@@ -48,7 +48,13 @@ KEYSTONE_USERNAME = None
 KEYSTONE_PASSWORD = None
 KEYSTONE_AUTH_URL = None
 KEYSTONE_PROJECT_ID = None
+KEYSTONE_PROJECT_NAME = None
+KEYSTONE_DOMAIN_ID = None
+KEYSTONE_DOMAIN_NAME = None
 KEYSTONE_USER_DOMAIN_ID = None
+KEYSTONE_USER_DOMAIN_NAME = None
+KEYSTONE_PROJECT_DOMAIN_ID = None
+KEYSTONE_PROJECT_DOMAIN_NAME = None
 KEYSTONE_CACERT = None
 
 SCHEDULER_REPORT_ALIVE_PERIOD = None
@@ -80,8 +86,14 @@ def _parse_cfg():
     _assign('KEYSTONE_USERNAME', _get("keystone", "username"))
     _assign('KEYSTONE_PASSWORD', _get("keystone", "password"))
     _assign('KEYSTONE_AUTH_URL', _get("keystone", "auth_url"))
-    _assign('KEYSTONE_PROJECT_ID', _get("keystone", "project_id"))
-    _assign('KEYSTONE_USER_DOMAIN_ID', _get("keystone", "user_domain_id"))
+    _assign('KEYSTONE_PROJECT_ID', _get("keystone", "project_id", required=False))
+    _assign('KEYSTONE_PROJECT_NAME', _get("keystone", "project_name", required=False))
+    _assign('KEYSTONE_DOMAIN_ID', _get("keystone", "domain_id", required=False))
+    _assign('KEYSTONE_DOMAIN_NAME', _get("keystone", "domain_name", required=False))
+    _assign('KEYSTONE_USER_DOMAIN_ID', _get("keystone", "user_domain_id", required=False))
+    _assign('KEYSTONE_USER_DOMAIN_NAME', _get("keystone", "user_domain_name", required=False))
+    _assign('KEYSTONE_PROJECT_DOMAIN_ID', _get("keystone", "project_domain_id", required=False))
+    _assign('KEYSTONE_PROJECT_DOMAIN_NAME', _get("keystone", "project_domain_name", required=False))
     _assign('KEYSTONE_CACERT', _get("keystone", "cacert"))
 
     # [scheduler]
