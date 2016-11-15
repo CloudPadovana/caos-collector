@@ -36,49 +36,20 @@ import log
 import utils
 import cfg
 import pollsters
+import openstack
 
-
-from keystoneclient.auth.identity import v3
-from keystoneauth1 import session
-from keystoneclient import client as keystone_client
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 
 
 logger = log.get_logger()
-def get_keystone_session():
-    os_envs = {
-        'username'            : cfg.KEYSTONE_USERNAME,
-        'password'            : cfg.KEYSTONE_PASSWORD,
-        'auth_url'            : cfg.KEYSTONE_AUTH_URL,
-        'project_id'          : cfg.KEYSTONE_PROJECT_ID,
-        'project_name'        : cfg.KEYSTONE_PROJECT_NAME,
-        'domain_id'           : cfg.KEYSTONE_DOMAIN_ID,
-        'domain_name'         : cfg.KEYSTONE_DOMAIN_NAME,
-        'user_domain_id'      : cfg.KEYSTONE_USER_DOMAIN_ID,
-        'user_domain_name'    : cfg.KEYSTONE_USER_DOMAIN_NAME,
-        'project_domain_id'   : cfg.KEYSTONE_PROJECT_DOMAIN_ID,
-        'project_domain_name' : cfg.KEYSTONE_PROJECT_DOMAIN_NAME
-    }
-
-    auth = v3.Password(**os_envs)
-    return session.Session(auth=auth, verify=cfg.KEYSTONE_CACERT)
 
 
-def update_projects(keystone_session):
+
+def update_projects():
     # get projects from keystone
-    keystone = keystone_client.Client(session=keystone_session,
-                                      version=cfg.KEYSTONE_API_VERSION)
-
-    logger.debug("Querying projects from keystone...")
-    if keystone.version == 'v3':
-        keystone_projects = keystone.projects.list()
-    elif keystone.version == 'v2':
-        keystone_projects = keystone.tenants.list()
-    else:
-        raise RuntimeError("Unknown keystoneclient version: '%s'" % keystone.version)
-    keystone_projects = dict((p.id, p.name) for p in keystone_projects)
+    keystone_projects = openstack.projects()
 
     # get known projects
     my_projects = caos_api.projects()
@@ -144,11 +115,8 @@ def report_alive(scheduler):
 def collect(period_name, period, misfire_grace_time):
     logger.info("Starting collection for period %s (%ds)" %(period_name, period))
 
-    # get a keystone session
-    keystone_session = get_keystone_session()
-
     # update the known projects
-    projects = update_projects(keystone_session)
+    projects = update_projects()
 
     # update the metrics (this will not reread the config file)
     metrics = update_metrics()

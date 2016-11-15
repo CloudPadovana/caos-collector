@@ -35,6 +35,7 @@ import caos_api
 import ceilometer
 import cfg
 import log
+import openstack
 import utils
 
 
@@ -146,6 +147,14 @@ def main():
         ceilometer.initialize(cfg.CEILOMETER_MONGODB, cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
     except ceilometer.ConnectionError as e:
         logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
+        sys.exit(1)
+
+    try:
+        logger.info("Checking KEYSTONE auth...")
+        openstack.initialize()
+        openstack.get_keystone_client()
+    except openstack.OpenstackError as e:
+        logger.error("Cannot authenticate to KEYSTONE: %s. Exiting...", e)
         sys.exit(1)
 
     cfg.CFG['shot'] = None
