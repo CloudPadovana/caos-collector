@@ -42,8 +42,7 @@ import pollsters
 
 from keystoneclient.auth.identity import v3
 from keystoneauth1 import session
-# import keystoneclient.v3.client as keystone_client
-import keystoneclient.v2_0.client as keystone_client
+from keystoneclient import client as keystone_client
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -133,11 +132,16 @@ def get_keystone_session():
 
 def update_projects(keystone_session):
     # get projects from keystone
-    keystone = keystone_client.Client(session=keystone_session)
+    keystone = keystone_client.Client(session=keystone_session,
+                                      version=cfg.KEYSTONE_API_VERSION)
 
     logger.debug("Querying projects from keystone...")
-    # keystone_projects = keystone.projects.list()
-    keystone_projects = keystone.tenants.list()
+    if keystone.version == 'v3':
+        keystone_projects = keystone.projects.list()
+    elif keystone.version == 'v2':
+        keystone_projects = keystone.tenants.list()
+    else:
+        raise RuntimeError("Unknown keystoneclient version: '%s'" % keystone.version)
     keystone_projects = dict((p.id, p.name) for p in keystone_projects)
 
     # get known projects

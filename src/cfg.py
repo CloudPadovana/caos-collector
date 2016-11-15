@@ -56,6 +56,7 @@ KEYSTONE_USER_DOMAIN_NAME = None
 KEYSTONE_PROJECT_DOMAIN_ID = None
 KEYSTONE_PROJECT_DOMAIN_NAME = None
 KEYSTONE_CACERT = None
+KEYSTONE_API_VERSION = None
 
 SCHEDULER_REPORT_ALIVE_PERIOD = None
 
@@ -77,6 +78,7 @@ DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 DEFAULT_COLLECTOR_LOG_FILE = "/var/log/caos/collector.log"
 DEFAULT_COLLECTOR_LOG_ROTATE_BYTES = (1048576*5)
 DEFAULT_COLLECTOR_LOG_ROTATE_COUNT = 30
+DEFAULT_KEYSTONE_API_VERSION = "v3"
 
 def _parse_cfg():
     _assign('METRICS', _get_metrics())
@@ -95,6 +97,8 @@ def _parse_cfg():
     _assign('KEYSTONE_PROJECT_DOMAIN_ID', _get("keystone", "project_domain_id", required=False))
     _assign('KEYSTONE_PROJECT_DOMAIN_NAME', _get("keystone", "project_domain_name", required=False))
     _assign('KEYSTONE_CACERT', _get("keystone", "cacert"))
+    _assign('KEYSTONE_API_VERSION',
+            _get("keystone", "identity_api_version", "", DEFAULT_KEYSTONE_API_VERSION))
 
     # [scheduler]
     _assign('SCHEDULER_REPORT_ALIVE_PERIOD',
