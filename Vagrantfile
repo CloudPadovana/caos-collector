@@ -53,8 +53,10 @@ yum update -v -y
 yum install -v -y epel-release
 
 ### PYTHON
-yum install -v -y python-devel python-pip
-pip install --upgrade pip
+yum install -v -y python-devel python-pip python-virtualenv
+
+su -c "virtualenv venv" - vagrant
+su -c ". venv/bin/activate; pip install --upgrade pip" - vagrant
 SCRIPT
 
   config.vm.provision :shell, :inline => $script
