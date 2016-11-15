@@ -24,12 +24,13 @@
 #
 ################################################################################
 
-import log
 import types
 import warnings
-
 import pymongo
 from bson import SON
+
+import cfg
+import log
 
 
 logger = log.get_logger()
@@ -42,7 +43,9 @@ _db = None
 class ConnectionError(Exception):
     pass
 
-def initialize(mongodb, connect_timeout):
+def initialize():
+    mongodb = cfg.CEILOMETER_MONGODB
+    connect_timeout = cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT
     logger.info("Connecting to: %s." % mongodb)
     global _mongo
     try:

@@ -480,7 +480,7 @@ def main():
             cfg.CFG['force'] = force
 
     try:
-        ceilometer.initialize(cfg.CEILOMETER_MONGODB, cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
+        ceilometer.initialize()
     except ceilometer.ConnectionError as e:
         logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
         sys.exit(1)
