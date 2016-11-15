@@ -152,14 +152,14 @@ def read(cfg_file):
     _parse_cfg()
 
 
-def _get(section, option=None, type='str', default=None):
-    if not _config.has_section(section) and section != "DEFAULT" and not default:
+def _get(section, option=None, type='str', default=None, required=True):
+    if not _config.has_section(section) and section != "DEFAULT" and not default and required:
         raise RuntimeError("No [%s] section in config file." % section)
 
     if option and not _config.has_option(section, option):
-        if default:
-            return default
-        raise RuntimeError("No [%s]/%s option in config file." % (section, option))
+        if required and not default:
+            raise RuntimeError("No [%s]/%s option in config file." % (section, option))
+        return default
 
     if not option:
         return _config.options(section)
