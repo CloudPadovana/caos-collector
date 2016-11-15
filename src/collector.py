@@ -24,14 +24,12 @@
 #
 ################################################################################
 
-import argparse
 import datetime
 import os
 import sys
 import signal
 import StringIO
 
-from _version import __version__
 import caos_api
 import ceilometer
 import log
@@ -48,69 +46,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 
 
-DEFAULT_CFG_FILE = '/etc/caos/collector.conf'
-
-
-log.setup_logger()
 logger = log.get_logger()
-logger.info("Logger setup.")
-
-# CLI ARGs
-parser = argparse.ArgumentParser(description='Data collector for CAOS-NG.',
-                                 add_help=True)
-
-parser.add_argument('-v', '--version', action='version',
-                    version='%(prog)s {version}'.format(version=__version__))
-
-parser.add_argument('-c', '--config',
-                    dest='cfg_file', metavar='FILE',
-                    default=DEFAULT_CFG_FILE,
-                    help='configuration file')
-
-parser.add_argument('-f', '--force',
-                    action='store_const',
-                    const=True,
-                    help='Enable overwriting existing samples.')
-
-subparsers = parser.add_subparsers(dest="cmd",
-                                   help='sub commands')
-
-parser_run = subparsers.add_parser('run', help='run scheduled collection')
-
-parser_shot = subparsers.add_parser('shot', help='shot collection')
-
-parser_shot.add_argument('-s', '--start',
-                         dest='start', metavar='TIMESTAMP',
-                         nargs='?',
-                         default=utils.format_date(datetime.datetime.utcnow()),
-                         help='Perform shot collection from TIMESTAMP (default to now)')
-
-parser_shot.add_argument('-r', '--repeat',
-                         dest='repeat', metavar='N',
-                         nargs='?',
-                         default=1,
-                         help='Repeat N times (default to 1)')
-
-parser_shot.add_argument('-P', '--project',
-                         dest='project', metavar='PROJECT',
-                         nargs='?',
-                         default='ALL',
-                         help='Collect only project PROJECT (default to ALL)')
-
-parser_shot.add_argument('-m', '--metric',
-                         dest='metric', metavar='METRIC',
-                         nargs='?',
-                         default='ALL',
-                         help='Collect only metric METRIC (default to ALL)')
-
-parser_shot.add_argument('-p', '--period',
-                         dest='period', metavar='PERIOD',
-                         nargs='?',
-                         default='ALL',
-                         help='Collect only period PERIOD (default to ALL)')
-
-
-
 def get_keystone_session():
     os_envs = {
         'username'            : cfg.KEYSTONE_USERNAME,
@@ -458,75 +394,3 @@ def refresh_token():
     return s
 
 
-def main():
-    args = parser.parse_args()
-    cfg_file = args.cfg_file
-    cfg.read(cfg_file)
-    cfg.dump()
-    log.setup_file_handlers()
-
-    caos_api.initialize(cfg.CAOS_API_URL)
-    try:
-        logger.info("Checking API connectivity...")
-        status = caos_api.status()
-        logger.info("API version %s is in status '%s'", status['version'], status['status'])
-    except caos_api.ConnectionError as e:
-        logger.error("Cannot connect to API. Exiting....")
-        sys.exit(1)
-
-    try:
-        logger.info("Checking API auth...")
-        ok = refresh_token()
-        if not ok:
-            logger.error("Cannot authenticate to API: %s. Exiting...")
-            sys.exit(1)
-    except caos_api.AuthError as e:
-        logger.error("Cannot authenticate to API: %s. Exiting...", e)
-        sys.exit(1)
-
-
-    cfg.CFG['force'] = None
-    force = args.force
-    if force:
-        logger.info("FORCE COLLECTION ENABLED")
-        logger.warn("FORCE WILL OVERWRITE EXISTING DATA!!!!")
-        answer = raw_input("Are you sure? Type YES (uppercase) to go on: ")
-        if not answer == "YES":
-            return
-        else:
-            cfg.CFG['force'] = force
-
-    try:
-        ceilometer.initialize(cfg.CEILOMETER_MONGODB, cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT)
-    except ceilometer.ConnectionError as e:
-        logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
-        sys.exit(1)
-
-    cfg.CFG['shot'] = None
-    cmd = args.cmd
-    if cmd == 'shot':
-        run_shot(args)
-        sys.exit(0)
-    assert(cmd != 'shot')
-
-    assert(cmd == 'run')
-
-    periods = cfg.PERIODS
-    scheduler = setup_scheduler(periods=periods)
-
-    def sigterm_handler(_signo, _stack_frame):
-        # Raises SystemExit(0):
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, sigterm_handler)
-
-    # this is blocking
-    try:
-        scheduler.start()
-    except (KeyboardInterrupt, SystemExit):
-        logger.info('Got SIGTERM! Terminating...')
-        scheduler.shutdown(wait=False)
-
-
-if __name__ == "__main__":
-    main()
