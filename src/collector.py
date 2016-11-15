@@ -312,7 +312,7 @@ def collect(period_name, period, misfire_grace_time):
 
 def collect_job(*args, **kwargs):
     try:
-        ok = refresh_token()
+        ok = caos_api.refresh_token()
     except caos_api.ConnectionError as e:
         logger.warn("API connection problems: %s. Retrying at next polling time.", e)
         return
@@ -441,23 +441,6 @@ def run_shot(args):
         collect_job(**kwargs)
 
 
-def refresh_token():
-    logger.info("Refreshing token...")
-    token = caos_api.token(username=cfg.CAOS_API_USERNAME,
-                           password=cfg.CAOS_API_PASSWORD)
-    logger.info("Got new token")
-
-    caos_api.set_token(token)
-    status = caos_api.status()
-    logger.info("API version %s is in status '%s'", status['version'], status['status'])
-    s = status['auth'] == "yes"
-    if s:
-        logger.info("API auth is OK")
-    else:
-        logger.error("Error with API auth")
-    return s
-
-
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
@@ -465,7 +448,7 @@ def main():
     cfg.dump()
     log.setup_file_handlers()
 
-    caos_api.initialize(cfg.CAOS_API_URL)
+    caos_api.initialize()
     try:
         logger.info("Checking API connectivity...")
         status = caos_api.status()
@@ -476,9 +459,9 @@ def main():
 
     try:
         logger.info("Checking API auth...")
-        ok = refresh_token()
+        ok = caos_api.refresh_token()
         if not ok:
-            logger.error("Cannot authenticate to API: %s. Exiting...")
+            logger.error("Cannot authenticate to API. Exiting...")
             sys.exit(1)
     except caos_api.AuthError as e:
         logger.error("Cannot authenticate to API: %s. Exiting...", e)

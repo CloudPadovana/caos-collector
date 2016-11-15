@@ -26,6 +26,7 @@
 
 import requests
 
+import cfg
 import log
 import utils
 
@@ -47,16 +48,33 @@ __jwt_auth = JWTAuth()
 _caos_api_url = None
 _token = None
 
-def initialize(caos_api_url):
+def initialize():
     global _caos_api_url
 
-    _caos_api_url = caos_api_url
+    _caos_api_url = cfg.CAOS_API_URL
 
 def set_token(token):
     global _token
 
     _token = token
 
+def refresh_token():
+    logger.info("Refreshing token...")
+    new_token = token(username=cfg.CAOS_API_USERNAME,
+                      password=cfg.CAOS_API_PASSWORD)
+    logger.info("Got new token")
+
+    set_token(new_token)
+    api_status = status()
+    logger.info("API version %s is in status '%s'",
+                api_status['version'],
+                api_status['status'])
+    s = api_status['auth'] == "yes"
+    if s:
+        logger.info("API auth is OK")
+    else:
+        logger.error("Error with API auth")
+    return s
 
 def _request(rest_type, api, data=None, params=None):
     fun = getattr(requests, rest_type)
