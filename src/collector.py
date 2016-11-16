@@ -24,125 +24,29 @@
 #
 ################################################################################
 
-import argparse
 import datetime
-import os
-import sys
-import signal
-import StringIO
 
-from _version import __version__
 import caos_api
 import ceilometer
 import log
 import utils
 import cfg
 import pollsters
+import openstack
+import scheduler
 
-
-from keystoneclient.auth.identity import v3
-from keystoneauth1 import session
-from keystoneclient import client as keystone_client
-
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.executors.pool import ThreadPoolExecutor
-
-
-DEFAULT_CFG_FILE = '/etc/caos/collector.conf'
-
-
-log.setup_logger()
 logger = log.get_logger()
-logger.info("Logger setup.")
-
-# CLI ARGs
-parser = argparse.ArgumentParser(description='Data collector for CAOS-NG.',
-                                 add_help=True)
-
-parser.add_argument('-v', '--version', action='version',
-                    version='%(prog)s {version}'.format(version=__version__))
-
-parser.add_argument('-c', '--config',
-                    dest='cfg_file', metavar='FILE',
-                    default=DEFAULT_CFG_FILE,
-                    help='configuration file')
-
-parser.add_argument('-f', '--force',
-                    action='store_const',
-                    const=True,
-                    help='Enable overwriting existing samples.')
-
-subparsers = parser.add_subparsers(dest="cmd",
-                                   help='sub commands')
-
-parser_run = subparsers.add_parser('run', help='run scheduled collection')
-
-parser_shot = subparsers.add_parser('shot', help='shot collection')
-
-parser_shot.add_argument('-s', '--start',
-                         dest='start', metavar='TIMESTAMP',
-                         nargs='?',
-                         default=utils.format_date(datetime.datetime.utcnow()),
-                         help='Perform shot collection from TIMESTAMP (default to now)')
-
-parser_shot.add_argument('-r', '--repeat',
-                         dest='repeat', metavar='N',
-                         nargs='?',
-                         default=1,
-                         help='Repeat N times (default to 1)')
-
-parser_shot.add_argument('-P', '--project',
-                         dest='project', metavar='PROJECT',
-                         nargs='?',
-                         default='ALL',
-                         help='Collect only project PROJECT (default to ALL)')
-
-parser_shot.add_argument('-m', '--metric',
-                         dest='metric', metavar='METRIC',
-                         nargs='?',
-                         default='ALL',
-                         help='Collect only metric METRIC (default to ALL)')
-
-parser_shot.add_argument('-p', '--period',
-                         dest='period', metavar='PERIOD',
-                         nargs='?',
-                         default='ALL',
-                         help='Collect only period PERIOD (default to ALL)')
 
 
-
-def get_keystone_session():
-    os_envs = {
-        'username'            : cfg.KEYSTONE_USERNAME,
-        'password'            : cfg.KEYSTONE_PASSWORD,
-        'auth_url'            : cfg.KEYSTONE_AUTH_URL,
-        'project_id'          : cfg.KEYSTONE_PROJECT_ID,
-        'project_name'        : cfg.KEYSTONE_PROJECT_NAME,
-        'domain_id'           : cfg.KEYSTONE_DOMAIN_ID,
-        'domain_name'         : cfg.KEYSTONE_DOMAIN_NAME,
-        'user_domain_id'      : cfg.KEYSTONE_USER_DOMAIN_ID,
-        'user_domain_name'    : cfg.KEYSTONE_USER_DOMAIN_NAME,
-        'project_domain_id'   : cfg.KEYSTONE_PROJECT_DOMAIN_ID,
-        'project_domain_name' : cfg.KEYSTONE_PROJECT_DOMAIN_NAME
-    }
-
-    auth = v3.Password(**os_envs)
-    return session.Session(auth=auth, verify=cfg.KEYSTONE_CACERT)
+def initialize():
+    logger.info("Initializing collector...")
+    periods = cfg.PERIODS
+    setup_scheduler(periods=periods)
 
 
-def update_projects(keystone_session):
+def update_projects():
     # get projects from keystone
-    keystone = keystone_client.Client(session=keystone_session,
-                                      version=cfg.KEYSTONE_API_VERSION)
-
-    logger.debug("Querying projects from keystone...")
-    if keystone.version == 'v3':
-        keystone_projects = keystone.projects.list()
-    elif keystone.version == 'v2':
-        keystone_projects = keystone.tenants.list()
-    else:
-        raise RuntimeError("Unknown keystoneclient version: '%s'" % keystone.version)
-    keystone_projects = dict((p.id, p.name) for p in keystone_projects)
+    keystone_projects = openstack.projects()
 
     # get known projects
     my_projects = caos_api.projects()
@@ -196,23 +100,13 @@ def collect_real(metric_name, series, start, end, force):
     return sample
 
 
-def report_alive(scheduler):
-    logger.info("Collector is alive")
-
-    output = StringIO.StringIO()
-    scheduler.print_jobs(out=output)
-    logger.info(output.getvalue())
-    output.close()
 
 
 def collect(period_name, period, misfire_grace_time):
     logger.info("Starting collection for period %s (%ds)" %(period_name, period))
 
-    # get a keystone session
-    keystone_session = get_keystone_session()
-
     # update the known projects
-    projects = update_projects(keystone_session)
+    projects = update_projects()
 
     # update the metrics (this will not reread the config file)
     metrics = update_metrics()
@@ -338,43 +232,6 @@ def collect_job(*args, **kwargs):
 
 
 def setup_scheduler(periods):
-    log.setup_apscheduler_logger()
-    scheduler = BlockingScheduler(
-        timezone="utc",
-        executors={
-            'default': ThreadPoolExecutor(1)})
-
-    # the special alive job
-    report_alive_period = cfg.SCHEDULER_REPORT_ALIVE_PERIOD
-    logger.info("Registering report_alive job every %ds " % report_alive_period)
-    scheduler.add_job(func=report_alive,
-
-                      # trigger that determines when func is called
-                      trigger='interval',
-                      seconds=report_alive_period,
-
-                      name="report_alive",
-                      kwargs={
-                          "scheduler": scheduler,
-                      },
-
-                      # seconds after the designated runtime that
-                      # the job is still allowed to be run
-                      misfire_grace_time=int(round(report_alive_period/10)),
-
-                      # run once instead of many times if the
-                      # scheduler determines that the job should
-                      # be run more than once in succession
-                      coalesce=True,
-
-                      # maximum number of concurrently running
-                      # instances allowed for this job
-                      max_instances=1,
-
-                      # when to first run the job, regardless of the
-                      # trigger (pass None to add the job as paused)
-                      next_run_time=datetime.datetime.utcnow())
-
     misfire_grace_time = cfg.COLLECTOR_MISFIRE_GRACE_TIME
     for name in periods:
         period = periods[name]
@@ -411,8 +268,6 @@ def setup_scheduler(periods):
                           # paused)
                           next_run_time=datetime.datetime.utcnow())
 
-    return scheduler
-
 
 def run_shot(args):
     logger.info("SHOT %s", args)
@@ -445,77 +300,3 @@ def run_shot(args):
         }
 
         collect_job(**kwargs)
-
-
-def main():
-    args = parser.parse_args()
-    cfg_file = args.cfg_file
-    cfg.read(cfg_file)
-    cfg.dump()
-    log.setup_file_handlers()
-
-    caos_api.initialize()
-    try:
-        logger.info("Checking API connectivity...")
-        status = caos_api.status()
-        logger.info("API version %s is in status '%s'", status['version'], status['status'])
-    except caos_api.ConnectionError as e:
-        logger.error("Cannot connect to API. Exiting....")
-        sys.exit(1)
-
-    try:
-        logger.info("Checking API auth...")
-        ok = caos_api.refresh_token()
-        if not ok:
-            logger.error("Cannot authenticate to API. Exiting...")
-            sys.exit(1)
-    except caos_api.AuthError as e:
-        logger.error("Cannot authenticate to API: %s. Exiting...", e)
-        sys.exit(1)
-
-
-    cfg.CFG['force'] = None
-    force = args.force
-    if force:
-        logger.info("FORCE COLLECTION ENABLED")
-        logger.warn("FORCE WILL OVERWRITE EXISTING DATA!!!!")
-        answer = raw_input("Are you sure? Type YES (uppercase) to go on: ")
-        if not answer == "YES":
-            return
-        else:
-            cfg.CFG['force'] = force
-
-    try:
-        ceilometer.initialize()
-    except ceilometer.ConnectionError as e:
-        logger.error("Error: %s. Check your mongodb setup. Exiting...", e)
-        sys.exit(1)
-
-    cfg.CFG['shot'] = None
-    cmd = args.cmd
-    if cmd == 'shot':
-        run_shot(args)
-        sys.exit(0)
-    assert(cmd != 'shot')
-
-    assert(cmd == 'run')
-
-    periods = cfg.PERIODS
-    scheduler = setup_scheduler(periods=periods)
-
-    def sigterm_handler(_signo, _stack_frame):
-        # Raises SystemExit(0):
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, sigterm_handler)
-
-    # this is blocking
-    try:
-        scheduler.start()
-    except (KeyboardInterrupt, SystemExit):
-        logger.info('Got SIGTERM! Terminating...')
-        scheduler.shutdown(wait=False)
-
-
-if __name__ == "__main__":
-    main()

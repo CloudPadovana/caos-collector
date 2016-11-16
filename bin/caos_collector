@@ -24,4 +24,13 @@
 #
 ################################################################################
 
-from ._version import __version__
+import sys
+
+if __name__ == "__main__":
+    if __package__ is None:
+        from os import path
+        sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+        from src.main import main
+    else:
+        from ..src.main import main
+    main()
