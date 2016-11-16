@@ -241,7 +241,13 @@ def collect(period_name, period, misfire_grace_time):
         for metric_name in metrics:
             series = caos_api.series(project_id=project_id,
                                      metric_name=metric_name,
-                                     period=period)[0]
+                                     period=period)
+            if not series:
+                logger.info('Skipping disabled series %s/%s for project %s', metric_name, period, project_id)
+                continue
+            assert len(series) == 1
+
+            series = series[0]
             series_id = series['id']
             last_timestamp = series['last_timestamp']
 
