@@ -27,15 +27,16 @@
 import argparse
 import datetime
 import sys
-import signal
 
 
 from _version import __version__
 import caos_api
 import ceilometer
+import collector
 import cfg
 import log
 import openstack
+import scheduler
 import utils
 
 
@@ -102,7 +103,6 @@ parser_shot.add_argument('-p', '--period',
                          help='Collect only period PERIOD (default to ALL)')
 
 from collector import refresh_token
-from collector import setup_scheduler
 from collector import run_shot
 
 def main():
@@ -166,18 +166,8 @@ def main():
 
     assert(cmd == 'run')
 
-    periods = cfg.PERIODS
-    scheduler = setup_scheduler(periods=periods)
+    scheduler.initialize()
+    collector.initialize()
 
-    def sigterm_handler(_signo, _stack_frame):
-        # Raises SystemExit(0):
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, sigterm_handler)
-
-    # this is blocking
-    try:
-        scheduler.start()
-    except (KeyboardInterrupt, SystemExit):
-        logger.info('Got SIGTERM! Terminating...')
-        scheduler.shutdown(wait=False)
+    # this is blocking!!!
+    scheduler.main_loop()

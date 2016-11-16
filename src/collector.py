@@ -25,10 +25,6 @@
 ################################################################################
 
 import datetime
-import os
-import sys
-import signal
-import StringIO
 
 import caos_api
 import ceilometer
@@ -37,14 +33,15 @@ import utils
 import cfg
 import pollsters
 import openstack
-
-
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.executors.pool import ThreadPoolExecutor
-
+import scheduler
 
 logger = log.get_logger()
 
+
+def initialize():
+    logger.info("Initializing collector...")
+    periods = cfg.PERIODS
+    setup_scheduler(periods=periods)
 
 
 def update_projects():
@@ -103,13 +100,6 @@ def collect_real(metric_name, series, start, end, force):
     return sample
 
 
-def report_alive(scheduler):
-    logger.info("Collector is alive")
-
-    output = StringIO.StringIO()
-    scheduler.print_jobs(out=output)
-    logger.info(output.getvalue())
-    output.close()
 
 
 def collect(period_name, period, misfire_grace_time):
@@ -236,43 +226,6 @@ def collect_job(*args, **kwargs):
 
 
 def setup_scheduler(periods):
-    log.setup_apscheduler_logger()
-    scheduler = BlockingScheduler(
-        timezone="utc",
-        executors={
-            'default': ThreadPoolExecutor(1)})
-
-    # the special alive job
-    report_alive_period = cfg.SCHEDULER_REPORT_ALIVE_PERIOD
-    logger.info("Registering report_alive job every %ds " % report_alive_period)
-    scheduler.add_job(func=report_alive,
-
-                      # trigger that determines when func is called
-                      trigger='interval',
-                      seconds=report_alive_period,
-
-                      name="report_alive",
-                      kwargs={
-                          "scheduler": scheduler,
-                      },
-
-                      # seconds after the designated runtime that
-                      # the job is still allowed to be run
-                      misfire_grace_time=int(round(report_alive_period/10)),
-
-                      # run once instead of many times if the
-                      # scheduler determines that the job should
-                      # be run more than once in succession
-                      coalesce=True,
-
-                      # maximum number of concurrently running
-                      # instances allowed for this job
-                      max_instances=1,
-
-                      # when to first run the job, regardless of the
-                      # trigger (pass None to add the job as paused)
-                      next_run_time=datetime.datetime.utcnow())
-
     misfire_grace_time = cfg.COLLECTOR_MISFIRE_GRACE_TIME
     for name in periods:
         period = periods[name]
@@ -308,8 +261,6 @@ def setup_scheduler(periods):
                           # the trigger (pass None to add the job as
                           # paused)
                           next_run_time=datetime.datetime.utcnow())
-
-    return scheduler
 
 
 def run_shot(args):
