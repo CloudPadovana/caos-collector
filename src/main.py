@@ -115,16 +115,22 @@ def main():
     try:
         logger.info("Checking API connectivity...")
         status = caos_api.status()
-        logger.info("API version %s is in status '%s'", status['version'], status['status'])
+        logger.info("API server version %s is in status '%s'", status['version'], status['status'])
     except caos_api.ConnectionError as e:
         logger.error("Cannot connect to API. Exiting....")
+        sys.exit(1)
+
+    logger.info("Checking API version...")
+    ok = caos_api.check_version()
+    if not ok:
+        logger.error("Wrong API. Exiting...")
         sys.exit(1)
 
     try:
         logger.info("Checking API auth...")
         ok = caos_api.refresh_token()
         if not ok:
-            logger.error("Cannot authenticate to API: %s. Exiting...")
+            logger.error("Cannot authenticate to API. Exiting...")
             sys.exit(1)
     except caos_api.AuthError as e:
         logger.error("Cannot authenticate to API: %s. Exiting...", e)

@@ -24,7 +24,10 @@
 #
 ################################################################################
 
+import re
 import requests
+import semver
+
 
 import cfg
 import log
@@ -32,6 +35,23 @@ import utils
 
 
 logger = log.get_logger()
+
+
+_CAOS_API_SERVER_VERSION_RULES = [
+    '==0.0.1',
+]
+
+_CAOS_API_VERSION_RULES = [
+    '==1.0.0',
+]
+
+_REGEX = re.compile(
+    r"""
+    ^v
+    (?P<major>(?:0|[1-9][0-9]*))
+    (\.(?P<minor>(?:0|[1-9][0-9]*)))?
+    $
+    """, re.VERBOSE)
 
 class ConnectionError(Exception):
     pass
@@ -53,6 +73,45 @@ def initialize():
 
     _caos_api_url = cfg.CAOS_API_URL
 
+def _check_version_rules(version, rules):
+    ret = True
+    for rule in rules:
+        r = semver.match(version, rule)
+        logger.debug("Checking if %s%s: %s", version, rule, "OK" if r else "Failed")
+        ret = ret and r
+    return ret
+
+def check_version():
+    api_status = status()
+    ret = True
+
+    # check server version
+    version = api_status['version']
+    logger.debug("Checking API server version %s...", version)
+    ret = ret and _check_version_rules(version, _CAOS_API_SERVER_VERSION_RULES)
+    if not ret:
+        logger.error("Wrong API server version: %s", version)
+
+    # check api version
+    version = api_status['api_version']
+
+    # normalize
+    match = _REGEX.match(version)
+    if match is None:
+        logger.error("Invalid API version format: %s", version)
+        return False
+    major = match.group('major')
+    minor = match.group('minor')
+
+    version = semver.format_version(int(major),
+                                    int(minor) if minor else 0,
+                                    0)
+    logger.debug("Checking API version %s...", version)
+    ret = ret and _check_version_rules(version, _CAOS_API_VERSION_RULES)
+    if not ret:
+        logger.error("Wrong API version: %s", version)
+    return ret
+
 def set_token(token):
     global _token
 
@@ -66,9 +125,7 @@ def refresh_token():
 
     set_token(new_token)
     api_status = status()
-    logger.info("API version %s is in status '%s'",
-                api_status['version'],
-                api_status['status'])
+    logger.info("API is in status '%s'", api_status['status'])
     s = api_status['auth'] == "yes"
     if s:
         logger.info("API auth is OK")

@@ -2,5 +2,6 @@ pymongo ~= 3.3
 requests ~= 2.12
 apscheduler ~= 3.3
 numpy ~= 1.11
+semver ~= 2.7
 
 python-keystoneclient ~= 3.6
