@@ -104,6 +104,17 @@ parser_shot.add_argument('-p', '--period',
 
 from collector import run_shot
 
+def cmd_run(args):
+    scheduler.initialize()
+    collector.initialize()
+
+    # this is blocking!!!
+    scheduler.main_loop()
+
+_CMDS = {
+    'run': cmd_run,
+}
+
 def main():
     args = parser.parse_args()
     cfg_file = args.cfg_file
@@ -169,10 +180,9 @@ def main():
         sys.exit(0)
     assert(cmd != 'shot')
 
-    assert(cmd == 'run')
+    if not cmd in _CMDS:
+        logger.error("Unknown command '%s'", cmd)
+        sys.exit(1)
 
-    scheduler.initialize()
-    collector.initialize()
-
-    # this is blocking!!!
-    scheduler.main_loop()
+    cmd_fun = _CMDS[cmd]
+    cmd_fun(args)
