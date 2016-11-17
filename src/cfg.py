@@ -61,9 +61,6 @@ KEYSTONE_API_VERSION = None
 SCHEDULER_REPORT_ALIVE_PERIOD = None
 
 COLLECTOR_MISFIRE_GRACE_TIME = None
-COLLECTOR_LOG_FILE = None
-COLLECTOR_LOG_ROTATE_BYTES = None
-COLLECTOR_LOG_ROTATE_COUNT = None
 
 CAOS_API_URL = None
 CAOS_API_USERNAME = None
@@ -73,17 +70,30 @@ CEILOMETER_MONGODB = None
 CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
 CEILOMETER_POLLING_PERIOD = None
 
+LOGGER_FILE = None
+LOGGER_ROTATE_BYTES = None
+LOGGER_ROTATE_COUNT = None
+
 # defaults
 DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
-DEFAULT_COLLECTOR_LOG_FILE = "/var/log/caos/collector.log"
-DEFAULT_COLLECTOR_LOG_ROTATE_BYTES = (1048576*5)
-DEFAULT_COLLECTOR_LOG_ROTATE_COUNT = 30
 DEFAULT_KEYSTONE_API_VERSION = "v3"
+DEFAULT_LOGGER_FILE = "/var/log/caos/collector.log"
+DEFAULT_LOGGER_ROTATE_BYTES = (1048576*5)
+DEFAULT_LOGGER_ROTATE_COUNT = 30
 
 def _parse_cfg():
     _assign('METRICS', _get_metrics())
     _assign('PERIODS', _get_periods())
     _assign('SERIES', _get_series())
+
+    _assign('LOGGER_FILE',
+            _get("logger", "file", "", DEFAULT_LOGGER_FILE))
+
+    _assign('LOGGER_ROTATE_BYTES',
+            _get("logger", "rotate_bytes", "int", DEFAULT_LOGGER_ROTATE_BYTES))
+
+    _assign('LOGGER_ROTATE_COUNT',
+            _get("logger", "rotate_count", "int", DEFAULT_LOGGER_ROTATE_COUNT))
 
     _assign('KEYSTONE_USERNAME', _get("keystone", "username"))
     _assign('KEYSTONE_PASSWORD', _get("keystone", "password"))
@@ -107,15 +117,6 @@ def _parse_cfg():
     # [collector]
     _assign('COLLECTOR_MISFIRE_GRACE_TIME',
             _get("collector", "misfire_grace_time", "int"))
-
-    _assign('COLLECTOR_LOG_FILE',
-            _get("collector", "log_file", "", DEFAULT_COLLECTOR_LOG_FILE))
-
-    _assign('COLLECTOR_LOG_ROTATE_BYTES',
-            _get("collector", "log_rotate_bytes", "int", DEFAULT_COLLECTOR_LOG_ROTATE_BYTES))
-
-    _assign('COLLECTOR_LOG_ROTATE_COUNT',
-            _get("collector", "log_rotate_count", "int", DEFAULT_COLLECTOR_LOG_ROTATE_COUNT))
 
     # [caos-api]
     _assign('CAOS_API_URL', _get('caos-api', 'api_url'))

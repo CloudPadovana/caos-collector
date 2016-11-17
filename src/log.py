@@ -59,7 +59,7 @@ def setup_file_handlers():
     logger = get_logger()
 
     import cfg
-    log_file = cfg.COLLECTOR_LOG_FILE
+    log_file = cfg.LOGGER_FILE
     log_dir = os.path.dirname(log_file)
 
     if not os.path.isdir(log_dir):
@@ -67,9 +67,9 @@ def setup_file_handlers():
         os.mkdir(log_dir)
 
 
-    ch = logging.handlers.RotatingFileHandler(cfg.COLLECTOR_LOG_FILE,
-                                              maxBytes=cfg.COLLECTOR_LOG_ROTATE_BYTES,
-                                              backupCount=cfg.COLLECTOR_LOG_ROTATE_COUNT)
+    ch = logging.handlers.RotatingFileHandler(cfg.LOGGER_FILE,
+                                              maxBytes=cfg.LOGGER_ROTATE_BYTES,
+                                              backupCount=cfg.LOGGER_ROTATE_COUNT)
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(_formatter)
 
@@ -78,4 +78,4 @@ def setup_file_handlers():
     logger = logging.getLogger('apscheduler')
     logger.addHandler(ch)
 
-    logger.info("Setup log to file %s", cfg.COLLECTOR_LOG_FILE)
+    logger.info("Setup log to file %s", cfg.LOGGER_FILE)
