@@ -37,12 +37,9 @@ import utils
 logger = log.get_logger(__name__)
 
 
-_CAOS_API_SERVER_VERSION_RULES = [
-    '==0.0.1',
-]
-
 _CAOS_API_VERSION_RULES = [
-    '==1.0.0',
+    '>=1.0.0',
+    '<1.1.0'
 ]
 
 _REGEX = re.compile(
@@ -83,16 +80,6 @@ def _check_version_rules(version, rules):
 
 def check_version():
     api_status = status()
-    ret = True
-
-    # check server version
-    version = api_status['version']
-    logger.debug("Checking API server version %s...", version)
-    ret = ret and _check_version_rules(version, _CAOS_API_SERVER_VERSION_RULES)
-    if not ret:
-        logger.error("Wrong API server version: %s", version)
-
-    # check api version
     version = api_status['api_version']
 
     # normalize
@@ -107,7 +94,7 @@ def check_version():
                                     int(minor) if minor else 0,
                                     0)
     logger.debug("Checking API version %s...", version)
-    ret = ret and _check_version_rules(version, _CAOS_API_VERSION_RULES)
+    ret = _check_version_rules(version, _CAOS_API_VERSION_RULES)
     if not ret:
         logger.error("Wrong API version: %s", version)
     return ret
