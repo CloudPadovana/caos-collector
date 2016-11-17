@@ -31,7 +31,7 @@ import sys
 
 
 import log
-logger = log.get_logger()
+logger = log.get_logger(__name__)
 
 # parsed config file
 _config = None

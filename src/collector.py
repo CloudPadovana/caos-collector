@@ -35,7 +35,7 @@ import pollsters
 import openstack
 import scheduler
 
-logger = log.get_logger()
+logger = log.get_logger(__name__)
 
 
 def initialize():

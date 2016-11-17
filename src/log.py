@@ -29,10 +29,13 @@ import logging.handlers
 import os
 
 _formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+_LOGGER_ROOT_NAME = "caos-collector"
 
-
-def get_logger():
-    return logging.getLogger("collector")
+def get_logger(name=None):
+    root_logger = logging.getLogger(_LOGGER_ROOT_NAME)
+    if name:
+        return root_logger.getChild(name)
+    return root_logger
 
 
 def setup_logger():

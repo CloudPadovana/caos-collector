@@ -34,7 +34,7 @@ import log
 import utils
 
 
-logger = log.get_logger()
+logger = log.get_logger(__name__)
 
 
 _CAOS_API_SERVER_VERSION_RULES = [

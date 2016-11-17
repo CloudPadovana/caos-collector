@@ -36,7 +36,7 @@ import utils
 import cfg
 
 
-logger = log.get_logger()
+logger = log.get_logger(__name__)
 
 
 class Pollster(object):

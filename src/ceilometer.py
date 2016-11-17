@@ -33,7 +33,7 @@ import cfg
 import log
 
 
-logger = log.get_logger()
+logger = log.get_logger(__name__)
 
 
 _mongo = None
