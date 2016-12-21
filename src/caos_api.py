@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,8 +38,7 @@ logger = log.get_logger(__name__)
 
 
 _CAOS_API_VERSION_RULES = [
-    '>=1.0.0',
-    '<1.1.0'
+    '>=1.1.0',
 ]
 
 _REGEX = re.compile(
@@ -162,6 +161,50 @@ def token(username, password):
 
     token = data['token']
     return token
+
+def tags(id=None, key=None, value=None):
+    if id is not None:
+        return get('tags/%s' % id)
+
+    params = {}
+    if key is not None:
+        params['key'] = key
+    if value is not None:
+        params['value'] = value
+
+    return get('tags', params=params)
+
+def add_tag(key, value, extra={}):
+    data = {
+        'tag': {
+            'key': key,
+            'value': value,
+            'extra': extra
+        }
+    }
+
+    logger.info("Adding new tag %s[%s]" % (key, value))
+    post('tags', data)
+
+def set_tag(id=None, key=None, value=None, extra=None):
+    if extra is None:
+        return
+
+    if id is None:
+        if key is not None and value is not None:
+            id = tags(key=key, value=value)[0]['id']
+        else:
+            logger.error("id or key/value must be given!")
+
+    data = {
+        'tag': {
+            'id': id,
+            'extra': extra
+        }
+    }
+
+    logger.info("Updating tag %s[%s]" % (key, value))
+    put('tags/%s' % id, data)
 
 def projects():
     projects = get('projects')
