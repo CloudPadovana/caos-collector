@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,7 +56,8 @@ yum install -v -y epel-release
 yum install -v -y python-devel python-pip python-virtualenv
 
 su -c "virtualenv venv" - vagrant
-su -c ". venv/bin/activate; pip install --upgrade pip" - vagrant
+echo "source /vagrant/venv/bin/activate" >> /home/vagrant/.bash_profile
+su -c "pip install --upgrade pip" - vagrant
 SCRIPT
 
   config.vm.provision :shell, :inline => $script
