@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import datetime
 import sys
 
 
-from _version import __version__
+from . import __version__, __description__
 import caos_api
 import ceilometer
 import collector
@@ -49,7 +49,7 @@ DEFAULT_CFG_FILE = '/etc/caos/collector.conf'
 
 
 # CLI ARGs
-parser = argparse.ArgumentParser(description='Data collector for CAOS.',
+parser = argparse.ArgumentParser(description=__description__,
                                  add_help=True)
 
 parser.add_argument('-v', '--version', action='version',
@@ -186,3 +186,4 @@ def main():
 
     cmd_fun = _CMDS[cmd]
     cmd_fun(args)
+

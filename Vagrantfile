@@ -36,7 +36,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "centos/7"
 
   config.vm.synced_folder ".", "/vagrant", type: "rsync",
-                          rsync__exclude: [".git/", "venv/"],
+                          rsync__exclude: [".tox/",
+                                           ".eggs/",
+                                           "venv/",
+                                           "caos_collector.egg-info/",
+                                          ],
                           rsync__auto: true,
                           rsync__verbose: true
 
@@ -51,13 +55,15 @@ echo "cd /vagrant" >> /home/vagrant/.bash_profile
 
 yum update -v -y
 yum install -v -y epel-release
+yum install -v -y git
 
 ### PYTHON
-yum install -v -y python-devel python-pip python-virtualenv
+yum install -v -y python-devel python-pip python-ipython-console
+pip install --upgrade pip
+pip install tox
 
-su -c "virtualenv venv" - vagrant
-echo "source /vagrant/venv/bin/activate" >> /home/vagrant/.bash_profile
-su -c "pip install --upgrade pip" - vagrant
+su -c "tox -e venv" - vagrant
+echo "alias collector='tox -e venv --'" >> /home/vagrant/.bash_profile
 SCRIPT
 
   config.vm.provision :shell, :inline => $script
