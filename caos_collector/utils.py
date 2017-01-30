@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ def interp(x, y, x0, left=None, right=None):
     if not numpy.all(numpy.diff(x) > 0):
         # sort
         idxs = numpy.argsort(x)
-        x = x[idxs]
+        x = numpy.take(x, idxs)
         y = numpy.take(y, idxs)
 
     y0 = numpy.interp(x0, x, y, left=left, right=right)
