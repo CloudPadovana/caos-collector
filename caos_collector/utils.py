@@ -25,6 +25,9 @@
 ################################################################################
 
 import datetime
+import math
+from collections import Mapping
+from operator import add
 
 import numpy
 
@@ -37,11 +40,58 @@ EPOCH = datetime.datetime(year=1970,
                           microsecond=0,
                           tzinfo=None)
 
+u1_G = 1000 * 1000 * 1000
+u1_M = 1000 * 1000
+u1_hour = 3600
+
+
 def format_date(date):
     return date.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+
 def parse_date(date):
     return datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+
+
+# Based on
+# https://stackoverflow.com/questions/25833613/python-safe-method-to-get-value-of-nested-dictionary
+def deep_get(obj, item, fallback=None):
+    """Steps through an item chain to get the ultimate value.
+
+    If ultimate value or path to value does not exist, does not raise
+    an exception and instead returns `fallback`.
+
+    >>> d = {'snl_final': {'about': {'_icsd': {'icsd_id': 1}}}}
+    >>> deepgetitem(d, 'snl_final.about._icsd.icsd_id')
+    1
+    >>> deepgetitem(d, 'snl_final.about._sandbox.sbx_id')
+    >>>
+    """
+    def getitem(obj, name):
+        try:
+            return obj[name]
+        except (KeyError, TypeError):
+            return fallback
+    return reduce(getitem, item.split('.'), obj)
+
+
+def timeline(period, start=EPOCH, end=datetime.datetime.utcnow()):
+    if period == 0:
+        raise RuntimeError("Period can not be 0")
+
+    d = (start - EPOCH).total_seconds()
+    n = period * math.floor(d / period)
+    P = datetime.timedelta(seconds=period)
+
+    current = EPOCH + datetime.timedelta(seconds=n) + P
+
+    grid = []
+    while current < end:
+        grid.append(current)
+        current = current + P
+
+    return grid
+
 
 def interp(x, y, x0, left=None, right=None):
     # check order
@@ -53,6 +103,7 @@ def interp(x, y, x0, left=None, right=None):
 
     y0 = numpy.interp(x0, x, y, left=left, right=right)
     return y0
+
 
 def integrate(x, y):
     return numpy.trapz(x=x, y=y)
@@ -91,20 +142,19 @@ def integrate(x, y):
 #  22: 4885734186131977315,
 #  111: 3461911260025554326}
 
-from collections import Mapping
-from itertools import chain
-from operator import add
 
 _FLAG_FIRST = object()
 
-def flattenDict(d, join=add, lift=lambda x:x):
+
+def flattenDict(d, join=add, lift=lambda x: x):
     results = []
+
     def visit(subdict, results, partialKey):
-        for k,v in subdict.items():
-            newKey = lift(k) if partialKey==_FLAG_FIRST else join(partialKey,lift(k))
-            if isinstance(v,Mapping):
+        for k, v in subdict.items():
+            newKey = lift(k) if partialKey == _FLAG_FIRST else join(partialKey, lift(k))
+            if isinstance(v, Mapping):
                 visit(v, results, newKey)
             else:
-                results.append((newKey,v))
+                results.append((newKey, v))
     visit(d, results, _FLAG_FIRST)
     return results

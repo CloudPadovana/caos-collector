@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,13 +27,13 @@
 import datetime
 import signal
 import StringIO
+import sys
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 
 import cfg
 import log
-import utils
 
 
 logger = log.get_logger(__name__)
@@ -52,44 +52,12 @@ def initialize():
         executors={
             'default': ThreadPoolExecutor(1)})
 
-    # the special alive job
-    report_alive_period = cfg.SCHEDULER_REPORT_ALIVE_PERIOD
-    logger.info("Registering job REPORT_ALIVE running every %ds." % report_alive_period)
 
-    add_job(func=report_alive_job,
-
-            # trigger that determines when func is called
-            trigger='interval',
-            seconds=report_alive_period,
-
-            name="report_alive",
-            kwargs={
-                "scheduler": _scheduler,
-            },
-
-            # seconds after the designated runtime that
-            # the job is still allowed to be run
-            misfire_grace_time=int(round(report_alive_period/10)),
-
-            # run once instead of many times if the
-            # scheduler determines that the job should
-            # be run more than once in succession
-            coalesce=True,
-
-            # maximum number of concurrently running
-            # instances allowed for this job
-            max_instances=1,
-
-            # when to first run the job, regardless of the
-            # trigger (pass None to add the job as paused)
-            next_run_time=datetime.datetime.utcnow())
-
-
-def report_alive_job(scheduler):
+def report_alive():
     logger.info("Scheduler is alive")
 
     output = StringIO.StringIO()
-    scheduler.print_jobs(out=output)
+    _scheduler.print_jobs(out=output)
     logger.info(output.getvalue())
     output.close()
 

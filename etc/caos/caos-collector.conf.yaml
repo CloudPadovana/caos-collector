@@ -1,0 +1,73 @@
+logger:
+  directory: /var/log/caos/collector.log
+  rotate_keep_count: 30
+
+
+keystone:
+  # username: OS_USERNAME
+  # password: OS_PASSWORD
+  # auth_url: OS_AUTH_URL
+  # project_id: OS_PROJECT_ID
+  # project_name: OS_PROJECT_NAME
+  # domain_id: OS_DOMAIN_ID
+  # domain_name: OS_DOMAIN_NAME
+  # user_domain_id: OS_USER_DOMAIN_ID
+  # user_domain_name: OS_USER_DOMAIN_NAME
+  # project_domain_id: OS_PROJECT_DOMAIN_ID
+  # project_domain_name: OS_PROJECT_DOMAIN_NAME
+  # cacert: OS_CACERT
+  # identity_api_version: v3
+
+
+ceilometer:
+  # mongodb = mongodb://username:password@hostname1:port1,hostname2:port2/dbname
+  # polling_period: 600
+  # mongodb_connection_timeout: 1
+
+
+caos-tsdb:
+  # api_url: http://localhost:4000/api/v1
+  # username: USERNAME
+  # password: PASSWORD
+
+
+schedulers:
+  report_alive:
+    # seconds after the designated runtime that the job is still allowed
+    # to be run
+    misfire_grace_time: 60
+    minute: '*/1'
+    jobs:
+      - report_alive
+
+  metadata:
+    misfire_grace_time: 300
+    minute: '*/10'
+    jobs:
+      - domains_metadata
+      - projects_metadata --domain default
+      - hypervisors_metadata
+
+  quotas:
+    misfire_grace_time: 300
+    minute: '*/10'
+    jobs:
+      - projects_quotas --domain default
+
+  usages:
+    misfire_grace_time: 300
+    minute: '*/10'
+    jobs:
+      - vm_usage --domain default --period 3600 -C
+
+  usages_hourly:
+    misfire_grace_time: 300
+    minute: 12
+    jobs:
+      - vm_usage --domain default --period 3600
+
+  hypervisors:
+    misfire_grace_time: 300
+    minute: 10
+    jobs:
+      - 'hypervisors_state --allocation-ratio="{cpu: {default: 4, compute1.somedomain: 1, compute2.somedomain: 2 }, ram: {default: 1.5, compute2.somedomain: 2 } }"'

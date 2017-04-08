@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,53 +29,38 @@ from bson import SON
 import datetime
 
 
-import log
-import caos_api
 import ceilometer
-import utils
 import cfg
+import log
+import utils
 
 
 logger = log.get_logger(__name__)
 
 
 class Pollster(object):
-    project_id = None
-    metric_name = None
     period = None
-    series_id = None
     start = None
     end = None
 
-    def __init__(self, series, start, end):
-        self.project_id = series['project_id']
-        self.metric_name = series['metric_name']
-        self.period = series['period']
-        self.series_id = series['id']
+    def __init__(self, period, start, end):
+        self.period = period
         self.start = start
         self.end = end
 
-
-    def run(self, force_overwrite=False):
-        value = self.measure()
-        if value is None:
-            logger.debug("Skipping null sample")
-            return None
-
-        sample = caos_api.add_sample(series_id=self.series_id,
-                                     timestamp=self.end,
-                                     value=value,
-                                     force=force_overwrite)
-        return sample
+    def measure(self):
+        raise NotImplementedError
 
 
 class CeilometerPollster(Pollster):
+    project_id = None
     counter_name = None
     ceilometer_polling_period = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, project_id, *args, **kwargs):
         super(CeilometerPollster, self).__init__(*args, **kwargs)
 
+        self.project_id = project_id
         self.counter_name = self._counter_name()
         self.ceilometer_polling_period = cfg.CEILOMETER_POLLING_PERIOD
 
@@ -110,11 +95,12 @@ class CeilometerPollster(Pollster):
         resources = ceilometer.find_resources(project_id=self.project_id,
                                               meter=self.counter_name,
                                               start=start, end=end)
-        logger.debug("Project %s has %d resources of type %s in the range from %s to %s" % (self.project_id,
-                                                                                            len(resources),
-                                                                                            self.counter_name,
-                                                                                            start,
-                                                                                            end))
+        logger.debug("Project {id} has {n} resources of type {type} in the range from {start} to {end}"
+                     .format(id=self.project_id,
+                             n=len(resources),
+                             type=self.counter_name,
+                             start=start,
+                             end=end))
         return resources
 
     def build_query(self, resources, timestamp_query):
@@ -142,11 +128,6 @@ class CeilometerPollster(Pollster):
         return query
 
     def measure(self):
-        # first test ceilometer_polling_period time guard
-        now = datetime.datetime.utcnow()
-        if now < self.end + datetime.timedelta(seconds=self.ceilometer_polling_period):
-            return None
-
         resources = self.find_resources()
 
         # compute projection
@@ -171,12 +152,14 @@ class CeilometerPollster(Pollster):
 
         values = []
         for resource_id in resources:
-            logger.debug("Aggregating %s for resource %s" % (self.metric_name, resource_id))
+            logger.debug("Aggregating resource {id}"
+                         .format(id=resource_id))
 
             samples = list(s for s in allsamples if s['resource_id'] == resource_id)
             v = self.aggregate_resource(samples, key=self._counter_value_field())
             if v is None:
-                logger.debug("Missing %s data for resource %s" % (self.metric_name, resource_id))
+                logger.debug("Missing data for resource {id}"
+                             .format(id=resource_id))
                 continue
 
             values.append(v)
@@ -218,9 +201,9 @@ class CeilometerPollster(Pollster):
             raise RuntimeError("Don't know how to handle %s" % type(d))
 
 
-class CPUPollster(CeilometerPollster):
+class CPUTimePollster(CeilometerPollster):
     def __init__(self, *args, **kwargs):
-        super(CPUPollster, self).__init__(*args, **kwargs)
+        super(CPUTimePollster, self).__init__(*args, **kwargs)
 
     def _counter_name(self):
         return "cpu"
@@ -332,12 +315,3 @@ class WallClockTimePollster(CeilometerPollster):
     def aggregate_values(self, values):
         value = sum(values)
         return value
-
-_pollsters = {
-    'cpu': CPUPollster,
-    'wallclocktime': WallClockTimePollster
-}
-
-def get_pollster(metric):
-    return _pollsters[metric]
-

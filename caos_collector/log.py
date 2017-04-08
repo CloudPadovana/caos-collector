@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,21 +25,37 @@
 ################################################################################
 
 import logging
-import logging.handlers
+from logging.handlers import TimedRotatingFileHandler
 import os
 
+from . import __package_name__
+import cfg
+
+
 _formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-_LOGGER_ROOT_NAME = "caos-collector"
-
-def get_logger(name=None):
-    root_logger = logging.getLogger(_LOGGER_ROOT_NAME)
-    if name:
-        return root_logger.getChild(name)
-    return root_logger
 
 
-def setup_logger():
-    logger = get_logger()
+def get_root_logger():
+    return logging.getLogger(__package_name__)
+
+
+def initialize():
+    logger = get_root_logger()
+    logger.info("Logger setup.")
+
+
+def get_logger(name):
+    return get_root_logger().getChild(name)
+
+
+def setup_root_logger():
+    log_dir = cfg.LOGGER_DIRECTORY
+
+    if not os.path.isdir(log_dir):
+        get_root_logger().info("Creating log dir %s", log_dir)
+        os.mkdir(log_dir)
+
+    logger = get_root_logger()
     logger.setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler()
@@ -58,27 +74,30 @@ def setup_apscheduler_logger():
     logger.addHandler(ch)
 
 
-def setup_file_handlers():
-    logger = get_logger()
+def _setup_file_logger(name, filename, level):
+    logger = get_logger(name)
 
-    import cfg
-    log_file = cfg.LOGGER_FILE
-    log_dir = os.path.dirname(log_file)
+    log_filename = "{log_dir}/{base_name}-{fname}.log".format(
+        log_dir=cfg.LOGGER_DIRECTORY,
+        base_name=__package_name__,
+        fname=filename)
 
-    if not os.path.isdir(log_dir):
-        logger.info("Creating log dir %s", log_dir)
-        os.mkdir(log_dir)
+    ch = TimedRotatingFileHandler(log_filename,
+                                  when='midnight',
+                                  backupCount=cfg.LOGGER_ROTATE_KEEP_COUNT,
+                                  utc=True)
 
-
-    ch = logging.handlers.RotatingFileHandler(cfg.LOGGER_FILE,
-                                              maxBytes=cfg.LOGGER_ROTATE_BYTES,
-                                              backupCount=cfg.LOGGER_ROTATE_COUNT)
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(level)
     ch.setFormatter(_formatter)
 
     logger.addHandler(ch)
 
-    logger = logging.getLogger('apscheduler')
-    logger.addHandler(ch)
+    logger.info("Setup log for {name} to file {fname}".format(
+        name=name, fname=log_filename))
 
-    logger.info("Setup log to file %s", cfg.LOGGER_FILE)
+
+def setup_file_logger(name, filename):
+    _setup_file_logger(name, filename, logging.DEBUG)
+
+    fname = "{fname}.errors".format(fname=filename)
+    _setup_file_logger(name, fname, logging.ERROR)

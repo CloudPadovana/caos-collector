@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,13 +24,16 @@
 #
 ################################################################################
 
-import ConfigParser
+import yaml
 import os
 from pprint import pprint
 import sys
 
 
 import log
+import utils
+
+
 logger = log.get_logger(__name__)
 
 # parsed config file
@@ -40,10 +43,6 @@ _config = None
 CFG = {}
 
 # options
-METRICS = None
-PERIODS = None
-SERIES = None
-
 KEYSTONE_USERNAME = None
 KEYSTONE_PASSWORD = None
 KEYSTONE_AUTH_URL = None
@@ -58,77 +57,85 @@ KEYSTONE_PROJECT_DOMAIN_NAME = None
 KEYSTONE_CACERT = None
 KEYSTONE_API_VERSION = None
 
-SCHEDULER_REPORT_ALIVE_PERIOD = None
+SCHEDULERS = None
 
-COLLECTOR_MISFIRE_GRACE_TIME = None
-
-CAOS_API_URL = None
-CAOS_API_USERNAME = None
-CAOS_API_PASSWORD = None
+CAOS_TSDB_API_URL = None
+CAOS_TSDB_API_USERNAME = None
+CAOS_TSDB_API_PASSWORD = None
 
 CEILOMETER_MONGODB = None
 CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
 CEILOMETER_POLLING_PERIOD = None
 
-LOGGER_FILE = None
-LOGGER_ROTATE_BYTES = None
-LOGGER_ROTATE_COUNT = None
+LOGGER_DIRECTORY = None
+LOGGER_ROTATE_KEEP_COUNT = None
+
+OPENSTACK_NOVA_API_VERSION = None
 
 # defaults
 DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 DEFAULT_KEYSTONE_API_VERSION = "v3"
-DEFAULT_LOGGER_FILE = "/var/log/caos/collector.log"
-DEFAULT_LOGGER_ROTATE_BYTES = (1048576*5)
-DEFAULT_LOGGER_ROTATE_COUNT = 30
+DEFAULT_OPENSTACK_NOVA_API_VERSION = "2"
+DEFAULT_LOGGER_DIRECTORY = "/var/log/caos/collector"
+DEFAULT_LOGGER_ROTATE_KEEP_COUNT = 30
+
+# misc
+CAOS_DOMAIN_TAG_KEY = 'domain'
+CAOS_HYPERVISOR_TAG_KEY = 'hypervisor'
+CAOS_PROJECT_TAG_KEY = 'project'
+
 
 def _parse_cfg():
-    _assign('METRICS', _get_metrics())
-    _assign('PERIODS', _get_periods())
-    _assign('SERIES', _get_series())
+    _assign('SCHEDULERS', _get_schedulers())
 
-    _assign('LOGGER_FILE',
-            _get("logger", "file", "", DEFAULT_LOGGER_FILE))
+    _assign('LOGGER_DIRECTORY',
+            _get_str("logger.directory", default=DEFAULT_LOGGER_DIRECTORY))
 
-    _assign('LOGGER_ROTATE_BYTES',
-            _get("logger", "rotate_bytes", "int", DEFAULT_LOGGER_ROTATE_BYTES))
+    _assign('LOGGER_ROTATE_KEEP_COUNT',
+            _get_int("logger.rotate_keep_count",
+                     default=DEFAULT_LOGGER_ROTATE_KEEP_COUNT))
 
-    _assign('LOGGER_ROTATE_COUNT',
-            _get("logger", "rotate_count", "int", DEFAULT_LOGGER_ROTATE_COUNT))
-
-    _assign('KEYSTONE_USERNAME', _get("keystone", "username"))
-    _assign('KEYSTONE_PASSWORD', _get("keystone", "password"))
-    _assign('KEYSTONE_AUTH_URL', _get("keystone", "auth_url"))
-    _assign('KEYSTONE_PROJECT_ID', _get("keystone", "project_id", required=False))
-    _assign('KEYSTONE_PROJECT_NAME', _get("keystone", "project_name", required=False))
-    _assign('KEYSTONE_DOMAIN_ID', _get("keystone", "domain_id", required=False))
-    _assign('KEYSTONE_DOMAIN_NAME', _get("keystone", "domain_name", required=False))
-    _assign('KEYSTONE_USER_DOMAIN_ID', _get("keystone", "user_domain_id", required=False))
-    _assign('KEYSTONE_USER_DOMAIN_NAME', _get("keystone", "user_domain_name", required=False))
-    _assign('KEYSTONE_PROJECT_DOMAIN_ID', _get("keystone", "project_domain_id", required=False))
-    _assign('KEYSTONE_PROJECT_DOMAIN_NAME', _get("keystone", "project_domain_name", required=False))
-    _assign('KEYSTONE_CACERT', _get("keystone", "cacert"))
+    _assign('KEYSTONE_USERNAME', _get_str("keystone.username"))
+    _assign('KEYSTONE_PASSWORD', _get_str("keystone.password"))
+    _assign('KEYSTONE_AUTH_URL', _get_str("keystone.auth_url"))
+    _assign('KEYSTONE_PROJECT_ID', _get_str("keystone.project_id",
+                                            required=False))
+    _assign('KEYSTONE_PROJECT_NAME', _get_str("keystone.project_name",
+                                              required=False))
+    _assign('KEYSTONE_DOMAIN_ID', _get_str("keystone.domain_id",
+                                           required=False))
+    _assign('KEYSTONE_DOMAIN_NAME', _get_str("keystone.domain_name",
+                                             required=False))
+    _assign('KEYSTONE_USER_DOMAIN_ID', _get_str("keystone.user_domain_id",
+                                                required=False))
+    _assign('KEYSTONE_USER_DOMAIN_NAME', _get_str("keystone.user_domain_name",
+                                                  required=False))
+    _assign('KEYSTONE_PROJECT_DOMAIN_ID', _get_str("keystone.project_domain_id",
+                                                   required=False))
+    _assign('KEYSTONE_PROJECT_DOMAIN_NAME', _get_str("keystone.project_domain_name",
+                                                     required=False))
+    _assign('KEYSTONE_CACERT', _get_str("keystone.cacert"))
     _assign('KEYSTONE_API_VERSION',
-            _get("keystone", "identity_api_version", "", DEFAULT_KEYSTONE_API_VERSION))
+            _get_str("keystone.identity_api_version",
+                     default=DEFAULT_KEYSTONE_API_VERSION))
 
-    # [scheduler]
-    _assign('SCHEDULER_REPORT_ALIVE_PERIOD',
-            _get("scheduler", "report_alive_period", 'int'))
+    # [openstack]
+    _assign('OPENSTACK_NOVA_API_VERSION',
+            _get_str("openstack.nova_api_version",
+                     default=DEFAULT_OPENSTACK_NOVA_API_VERSION))
 
-    # [collector]
-    _assign('COLLECTOR_MISFIRE_GRACE_TIME',
-            _get("collector", "misfire_grace_time", "int"))
-
-    # [caos-api]
-    _assign('CAOS_API_URL', _get('caos-api', 'api_url'))
-    _assign('CAOS_API_USERNAME', _get('caos-api', 'username'))
-    _assign('CAOS_API_PASSWORD', _get('caos-api', 'password'))
+    # [caos-tsdb]
+    _assign('CAOS_TSDB_API_URL', _get_str('caos-tsdb.api_url'))
+    _assign('CAOS_TSDB_API_USERNAME', _get_str('caos-tsdb.username'))
+    _assign('CAOS_TSDB_API_PASSWORD', _get_str('caos-tsdb.password'))
 
     # [ceilometer]
-    _assign('CEILOMETER_MONGODB', _get('ceilometer', 'mongodb'))
+    _assign('CEILOMETER_MONGODB', _get_str('ceilometer.mongodb'))
     _assign('CEILOMETER_MONGODB_CONNECTION_TIMEOUT',
-            _get('ceilometer', 'mongodb_connection_timeout',
-                 'int', DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT))
-    _assign('CEILOMETER_POLLING_PERIOD', _get("ceilometer", "polling_period", "int"))
+            _get_int('ceilometer.mongodb_connection_timeout',
+                     default=DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT))
+    _assign('CEILOMETER_POLLING_PERIOD', _get_int("ceilometer.polling_period"))
+
 
 def dump():
     pprint({'CFG': CFG})
@@ -156,68 +163,96 @@ def read(cfg_file):
     if _config:
         raise RuntimeError("cfg file already parsed")
 
-    fname = None
-    if os.path.exists(cfg_file) and os.path.isfile(cfg_file):
-        fname = cfg_file
-
-    if not fname:
+    if not os.path.exists(cfg_file) or not os.path.isfile(cfg_file):
         raise RuntimeError("cfg file '%s' doesn't exists" % cfg_file)
 
-    _config = ConfigParser.RawConfigParser()
-    _config.read(fname)
+    with open(cfg_file, 'r') as ymlfile:
+        _config = yaml.safe_load(ymlfile)
 
     _parse_cfg()
 
 
-def _get(section, option=None, type='str', default=None, required=True):
-    if not _config.has_section(section) and section != "DEFAULT" and not default and required:
-        raise RuntimeError("No [%s] section in config file." % section)
+def _get(name, default=None, required=True, check_type=None):
+    value = utils.deep_get(_config, name)
 
-    if option and not _config.has_option(section, option):
-        if required and not default:
-            raise RuntimeError("No [%s]/%s option in config file." % (section, option))
-        return default
+    if required and not value:
+        if default:
+            return default
+        raise RuntimeError("No `{name}` in config file.".format(name=name))
 
-    if not option:
-        return _config.options(section)
+    if not check_type or not value:
+        return value
 
-    if type == 'str':
-        fun = getattr(_config, "get")
-    else:
-        fun = getattr(_config, "get%s" % type)
+    # check type
+    if not type(value) is check_type:
+        raise RuntimeError("Option `{name}` must be a `{type}`"
+                           .format(name=name, type=check_type.__name__))
 
-    return fun(section, option)
+    return value
 
 
-# FIXME: in the future the following structs should be queried from caos-api
-def _get_metrics():
+def _get_str(*args, **kwargs):
+    return _get(*args, check_type=str, **kwargs)
+
+
+def _get_int(*args, **kwargs):
+    value = _get(*args, check_type=int, **kwargs)
+    if value:
+        return int(value)
+    return None
+
+
+def _get_int_or_str(*args, **kwargs):
+    try:
+        value = _get_int(*args, **kwargs)
+    except:
+        value = _get_str(*args, **kwargs)
+
+    return value
+
+
+def _get_scheduler(name):
+    OPTIONS = [
+        'jobs',
+        'misfire_grace_time',
+    ]
+    CRON_OPTIONS = [
+        'day',
+        'hour',
+        'minute',
+        'second',
+    ]
+
+    for k in _get("schedulers.{name}".format(name=name)):
+        if k not in OPTIONS + CRON_OPTIONS:
+            raise RuntimeError("Unknown option `{option}` in `{section}`"
+                               .format(option=k,
+                                       section="schedulers.{name}".format(
+                                           name=name)))
+
     ret = {}
-    for s in _config.sections():
-        PREFIX = 'metric/'
-        if s.startswith(PREFIX):
-            _, name = s.split('/')
-            ret[name] = {
-                "type": _get(s, 'type')
-            }
+
+    cron_kwargs = {}
+    for opt in CRON_OPTIONS:
+        value = _get_int_or_str("schedulers.{name}.{opt}"
+                                .format(name=name, opt=opt), required=False)
+        if value:
+            cron_kwargs[opt] = value
+
+    cron_kwargs['misfire_grace_time'] = _get_int(
+        "schedulers.{name}.misfire_grace_time".format(name=name))
+
+    ret['cron_kwargs'] = cron_kwargs
+    ret['jobs'] = _get("schedulers.{name}.jobs".format(name=name))
+
     return ret
 
 
-def _get_periods():
-    periods = _get('periods')
-    return dict((p, _get('periods', p, 'int')) for p in periods)
+def _get_schedulers():
+    ret = {}
 
+    schedulers = _get('schedulers', required=True)
+    for name in schedulers:
+        ret[name] = _get_scheduler(name)
 
-def _get_series():
-    periods = _get_periods()
-    metrics = _get_metrics()
-
-    ret = []
-    for s in _config.sections():
-        PREFIX = 'series/'
-        if s.startswith(PREFIX):
-            _, metric_name, period = s.split('/')
-            ret.append({
-                "metric_name": metric_name,
-                "period": periods[period],
-                "ttl": _get(s, 'ttl', 'int')})
     return ret
