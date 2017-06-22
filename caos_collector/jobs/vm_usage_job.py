@@ -110,7 +110,15 @@ class VMUsageJob(Job):
         project_id = args.project_id
         period = args.period
         start = utils.parse_date(args.start)
+        if start > datetime.datetime.utcnow():
+            self.logger.warn("Start date is in the future. Resetting to NOW.")
+            start = datetime.datetime.utcnow()
+
         end = utils.parse_date(args.end)
+        if end < start:
+            self.logger.warn("End date is before start date. Resetting to start date.")
+            end = start
+
         overwrite = args.overwrite
         if args.current:
             overwrite = True
