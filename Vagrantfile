@@ -27,44 +27,13 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.provider "virtualbox" do |v|
-    v.memory = 512
-    v.cpus = 1
-    v.linked_clone = true
+  config.vm.hostname = "caos-collector"
+  config.ssh.username = "vagrant"
+  config.ssh.password = "vagrant"
+
+  config.vm.provider :docker do |d|
+    d.has_ssh = true
+    d.dockerfile = "Dockerfile.vagrant"
+    d.build_args = [ "-t", "vagrant-caos-collector" ]
   end
-
-  config.vm.box = "centos/7"
-
-  config.vm.synced_folder ".", "/vagrant", type: "rsync",
-                          rsync__exclude: [".tox/",
-                                           ".eggs/",
-                                           "venv/",
-                                           "caos_collector.egg-info/",
-                                          ],
-                          rsync__auto: true,
-                          rsync__verbose: true
-
-  config.vm.hostname = "collector.caos.vagrant.localhost"
-
-  $script = <<SCRIPT
-sed -i 's/AcceptEnv/# AcceptEnv/' /etc/ssh/sshd_config
-localectl set-locale "LANG=en_US.utf8"
-systemctl reload sshd.service
-
-echo "cd /vagrant" >> /home/vagrant/.bash_profile
-
-yum update -v -y
-yum install -v -y epel-release
-yum install -v -y git
-
-### PYTHON
-yum install -v -y python-devel python-pip python-ipython-console
-pip install --upgrade pip
-pip install tox
-
-su -c "tox -e venv" - vagrant
-echo "alias collector='tox -e venv --'" >> /home/vagrant/.bash_profile
-SCRIPT
-
-  config.vm.provision :shell, :inline => $script
 end
