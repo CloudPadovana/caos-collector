@@ -46,7 +46,7 @@ from jobs.vm_usage_job import VMUsageJob
 log.initialize()
 logger = log.get_logger(__name__)
 
-DEFAULT_CFG_FILE = './caos-collector.conf.yaml'
+DEFAULT_CFG_FILE = '/etc/caos/collector.conf.yaml'
 
 _JOBS = {
     'report_alive': ReportAliveJob,
