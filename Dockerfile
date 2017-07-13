@@ -1,11 +1,8 @@
-#!/usr/bin/env ruby
-# encoding: utf-8
-
 ################################################################################
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,17 +21,18 @@
 #
 ################################################################################
 
-VAGRANTFILE_API_VERSION = "2"
+FROM python:2.7
 
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.hostname = "caos-collector"
-  config.ssh.username = "vagrant"
-  config.ssh.password = "vagrant"
+LABEL maintainer "Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>"
 
-  config.vm.provider :docker do |d|
-    d.has_ssh = true
-    d.build_dir = "."
-    d.dockerfile = "Dockerfile.vagrant"
-    d.build_args = [ "-t", "vagrant-caos-collector" ]
-  end
-end
+ARG RELEASES_DIR
+ARG WHEEL_FILE
+
+WORKDIR /
+
+COPY $RELEASES_DIR/$WHEEL_FILE /
+
+RUN pip install --no-cache-dir /$WHEEL_FILE
+
+ENTRYPOINT [ "caos_collector" ]
+CMD [ "--help" ]
