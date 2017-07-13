@@ -75,8 +75,8 @@ class HypervisorsStateJob(Job):
     def _run(self, args):
         tz = datetime.datetime.utcnow()
 
+        ar = _DEFAULT_ALLOCATION_RATIO.copy()
         if args.allocation_ratio:
-            ar = _DEFAULT_ALLOCATION_RATIO.copy()
             ar.update(args.allocation_ratio)
 
         # get hypervisors from nova

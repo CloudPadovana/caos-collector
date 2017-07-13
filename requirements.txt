@@ -1,5 +1,5 @@
-setuptools ~= 33.1
-pbr ~= 2.0
+setuptools ~= 35.0
+pbr ~= 3.0
 
 apscheduler ~= 3.3
 numpy ~= 1.12

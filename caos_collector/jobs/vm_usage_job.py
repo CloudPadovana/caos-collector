@@ -110,7 +110,15 @@ class VMUsageJob(Job):
         project_id = args.project_id
         period = args.period
         start = utils.parse_date(args.start)
+        if start > datetime.datetime.utcnow():
+            self.logger.warn("Start date is in the future. Resetting to NOW.")
+            start = datetime.datetime.utcnow()
+
         end = utils.parse_date(args.end)
+        if end < start:
+            self.logger.warn("End date is before start date. Resetting to start date.")
+            end = start
+
         overwrite = args.overwrite
         if args.current:
             overwrite = True
@@ -167,22 +175,6 @@ class VMUsageJob(Job):
                                           end=ts,
                                           start=ts - datetime.timedelta(seconds=period),
                                           overwrite=overwrite)
-
-            last_timestamp = tsdb.last_timestamp(
-                tags=[{'key': cfg.CAOS_PROJECT_TAG_KEY,
-                       'value': project_id}],
-                metric_name=metrics.METRIC_VM_CPU_EFFICIENCY,
-                period=period)
-
-            grid = self._grid(start=start, end=end, period=period, current=args.current,
-                              misfire=args.misfire, last_timestamp=last_timestamp)
-
-            for ts in grid:
-                self.check_efficiency(project_id=project_id,
-                                      period=period,
-                                      end=ts,
-                                      start=ts - datetime.timedelta(seconds=period),
-                                      overwrite=overwrite)
 
             self.logger.info("VM usages updated")
 
@@ -325,35 +317,3 @@ class VMUsageJob(Job):
                            timestamp=end,
                            overwrite=overwrite,
                            value=sample)
-
-    def check_efficiency(self, project_id, period, start, end, overwrite):
-        self.logger.info("Checking cpu efficiency for project {id} from {s} to {e}"
-                         .format(id=project_id, name=project_id, s=start, e=end))
-
-        tag = {
-            'key': cfg.CAOS_PROJECT_TAG_KEY,
-            'value': project_id
-        }
-
-        cputime = tsdb.sample(metric_name=metrics.METRIC_VM_CPU_TIME_USAGE,
-                              period=period,
-                              tags=[tag],
-                              timestamp=end)['value']
-        if cputime is None:
-            return
-
-        wallclocktime = tsdb.sample(metric_name=metrics.METRIC_VM_WALLCLOCK_TIME_USAGE,
-                                    period=period,
-                                    tags=[tag],
-                                    timestamp=end)['value']
-        if wallclocktime is None:
-            return
-
-        efficiency = cputime / wallclocktime
-
-        tsdb.create_sample(metric_name=metrics.METRIC_VM_CPU_EFFICIENCY,
-                           period=period,
-                           tags=[tag],
-                           timestamp=end,
-                           overwrite=overwrite,
-                           value=efficiency)

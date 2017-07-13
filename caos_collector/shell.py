@@ -81,6 +81,7 @@ def setup_parser():
 
     subparsers = parser.add_subparsers(dest="job", help='job')
     subparsers.add_parser('daemon', help='daemon mode')
+    subparsers.add_parser('run', help='run scheduler')
 
     subparsers.required = False
 
@@ -98,6 +99,11 @@ def get_job_instance(name):
 
 
 def run_scheduler(scheduler_name, parser):
+    if not scheduler_name in cfg.SCHEDULERS:
+        logger.error("Scheduler '{name}' not found in configuration file"
+                     .format(name=scheduler_name))
+        sys.exit(1)
+
     scheduler_cfg = cfg.SCHEDULERS[scheduler_name]
     jobs = scheduler_cfg['jobs']
     for cmdline in jobs:
@@ -110,6 +116,8 @@ def run_scheduler(scheduler_name, parser):
         logger.info("Running job {cmd_line} for scheduler {name}"
                     .format(name=scheduler_name, cmd_line=cmdline))
         func()
+        logger.info("Finished job {cmd_line} for scheduler {name}"
+                    .format(name=scheduler_name, cmd_line=cmdline))
 
 
 def setup_scheduler(parser):
@@ -172,6 +180,10 @@ def main():
 
         # this is blocking!!!
         scheduler.main_loop()
+
+    if job_name == 'run':
+        run_scheduler(job_name, parser)
+        sys.exit(0)
 
     if job_name not in _JOBS:
         logger.error("Unknown job '%s'", job_name)
