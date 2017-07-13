@@ -140,3 +140,7 @@ say "Stopped container: %s\n" ${container_id}
 
 docker rm ${container_id}
 say "Removed container: %s\n" ${container_id}
+
+say "Building docker release"
+docker build -t caos-collector:${git_version} --build-arg WHEEL_FILE=${wheel_fname} --build-arg RELEASES_DIR=${releases_dir} .
+say "Docker release built\n"
