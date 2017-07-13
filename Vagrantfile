@@ -33,6 +33,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.provider :docker do |d|
     d.has_ssh = true
+    d.build_dir = "."
     d.dockerfile = "Dockerfile.vagrant"
     d.build_args = [ "-t", "vagrant-caos-collector" ]
   end
