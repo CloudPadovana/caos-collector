@@ -1,3 +1,6 @@
 caos-collector.conf.yaml
 *.pyc
+/.eggs/
+/.tox/
 /.vagrant
+/caos_collector.egg-info/
