@@ -77,6 +77,16 @@ while true ; do
     esac
 done
 
+# check if we are in a git working tree
+is_inside_git_working_tree=$(git rev-parse --is-inside-work-tree 2>/dev/null)
+if [ ${is_inside_git_working_tree} != true ] ; then
+    die "This script must be used inside a git working tree."
+fi
+
+# go to the top level
+top_level_dir=$(git rev-parse --show-toplevel)
+cd ${top_level_dir} || die "Cannot go to top level dir: %s" ${top_level_dir}
+
 ret=$(git describe --long $target 2>&1)
 if [ $? != 0 ] ; then
     die "Unable to find '%s' (git: '%s')" "${target}" "${ret}"
@@ -107,6 +117,10 @@ PBR Semver:  ${semver_pbr}
 "
 
 releases_dir=releases
+if [ ! -d ${releases_dir} ] ; then
+    say "Creating %s" ${releases_dir}
+    mkdir -p ${releases_dir}
+fi
 
 wheel_fname="caos_collector-${semver_pbr}-py2-none-any.whl"
 archive_fname="caos-collector-${semver}.tar.gz"
