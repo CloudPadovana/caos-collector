@@ -21,11 +21,12 @@
 #
 ################################################################################
 
-FROM buildpack-deps:jessie
+FROM buildpack-deps:stretch
 
 LABEL maintainer "Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>"
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-get upgrade -y && \
     apt-get install --no-install-recommends -y \
             apt-transport-https \
             apt-utils \
@@ -57,8 +58,10 @@ RUN echo "vagrant:vagrant" | chpasswd
 RUN echo "vagrant ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # provisioning
+ENV LANG=C.UTF-8
+
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-    apt-get install -y \
+    apt-get install --no-install-recommends -y \
             python2.7 \
             python2.7-dev \
             python-pip \
