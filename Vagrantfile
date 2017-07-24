@@ -27,14 +27,31 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.hostname = "caos-collector"
-  config.ssh.username = "vagrant"
-  config.ssh.password = "vagrant"
+  config.vm.define "caos-collector", primary: true do |collector|
+    collector.vm.hostname = "caos-collector"
+    collector.ssh.username = "vagrant"
+    collector.ssh.password = "vagrant"
 
-  config.vm.provider :docker do |d|
-    d.has_ssh = true
-    d.build_dir = "."
-    d.dockerfile = "Dockerfile.vagrant"
-    d.build_args = [ "-t", "vagrant-caos-collector" ]
+    collector.vm.provider :docker do |d|
+      d.name = "caos-collector"
+      d.has_ssh = true
+      d.build_dir = "."
+      d.dockerfile = "Dockerfile.vagrant"
+      d.build_args = [ "-t", "vagrant-caos-collector" ]
+    end
+
+    $script = <<~SCRIPT
+      DEBIAN_FRONTEND=noninteractive apt-get update && \
+        apt-get install --no-install-recommends -y \
+          python2.7 \
+          python2.7-dev \
+          python-pip \
+          ipython
+
+      pip install --upgrade pip
+      pip install tox
+    SCRIPT
+
+    collector.vm.provision :shell, privileged: true, inline: $script
   end
 end
