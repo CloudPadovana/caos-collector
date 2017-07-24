@@ -39,5 +39,19 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       d.dockerfile = "Dockerfile.vagrant"
       d.build_args = [ "-t", "vagrant-caos-collector" ]
     end
+
+    $script = <<~SCRIPT
+      DEBIAN_FRONTEND=noninteractive apt-get update && \
+        apt-get install --no-install-recommends -y \
+          python2.7 \
+          python2.7-dev \
+          python-pip \
+          ipython
+
+      pip install --upgrade pip
+      pip install tox
+    SCRIPT
+
+    collector.vm.provision :shell, privileged: true, inline: $script
   end
 end

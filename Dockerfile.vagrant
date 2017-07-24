@@ -57,19 +57,7 @@ RUN echo "vagrant:vagrant" | chpasswd
 # setup SUDO
 RUN echo "vagrant ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# provisioning
 ENV LANG=C.UTF-8
-
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-    apt-get install --no-install-recommends -y \
-            python2.7 \
-            python2.7-dev \
-            python-pip \
-            ipython
-
-RUN pip install --upgrade pip
-RUN pip install tox
-
 RUN echo "cd /vagrant" >> /home/vagrant/.profile
 
 CMD ["/usr/sbin/sshd", "-D"]
