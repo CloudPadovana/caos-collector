@@ -33,7 +33,6 @@ from novaclient import exceptions as nova_client_exceptions
 
 import cfg
 import log
-import utils
 
 
 logger = log.get_logger(__name__)

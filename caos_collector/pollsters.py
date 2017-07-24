@@ -24,7 +24,7 @@
 #
 ################################################################################
 
-from pymongo import ASCENDING, DESCENDING
+from pymongo import ASCENDING
 from bson import SON
 import datetime
 
