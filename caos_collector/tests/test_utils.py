@@ -28,6 +28,7 @@ import unittest
 
 from caos_collector import utils
 
+
 class TestUtils(unittest.TestCase):
     def setUp(self):
         pass

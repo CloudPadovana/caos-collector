@@ -41,6 +41,7 @@ _db = None
 class ConnectionError(Exception):
     pass
 
+
 def initialize():
     mongodb = cfg.CEILOMETER_MONGODB
     connect_timeout = cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT
