@@ -37,6 +37,15 @@ test:
   script:
     - tox -e py27
 
+coverage:
+  <<: *job_template
+  script:
+    - tox -e coverage
+  artifacts:
+    paths:
+      - cover
+  coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+\.?\d*)%/'
+
 pep8:
   <<: *job_template
   script:

@@ -1,6 +1,8 @@
 caos-collector.conf.yaml
 *.pyc
+/.coverage
 /.eggs/
 /.tox/
 /.vagrant
 /caos_collector.egg-info/
+/cover/
