@@ -251,7 +251,7 @@ class VMUsageJob(Job):
                 period=period,
                 tags=[tag],
                 timestamp=end,
-                value=usage['total_local_gb_usage'] * utils.u1_G * utils.u1_hour, # noqa: E501
+                value=usage['total_local_gb_usage'] * utils.u1_G * utils.u1_hour,  # noqa: E501
                 overwrite=overwrite)
 
         if 'total_memory_mb_usage' in usage:
@@ -260,7 +260,7 @@ class VMUsageJob(Job):
                 period=period,
                 tags=[tag],
                 timestamp=end,
-                value=usage['total_memory_mb_usage'] * utils.u1_M * utils.u1_hour, # noqa: E501
+                value=usage['total_memory_mb_usage'] * utils.u1_M * utils.u1_hour,  # noqa: E501
                 overwrite=overwrite)
 
         instances = []

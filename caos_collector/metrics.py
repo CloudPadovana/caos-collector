@@ -51,7 +51,7 @@ METRIC_QUOTA_MEMORY = 'quota.memory'
 METRIC_QUOTA_VCPUS = 'quota.vcpus'
 METRIC_QUOTA_INSTANCES = 'quota.instances'
 
-## hypervisors
+# hypervisors
 METRIC_HYPERVISOR_STATUS = 'hypervisor.status'
 METRIC_HYPERVISOR_STATE = 'hypervisor.state'
 

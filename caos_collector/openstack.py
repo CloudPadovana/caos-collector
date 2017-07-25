@@ -49,17 +49,17 @@ def initialize():
     global _keystone_session
 
     os_envs = {
-        'username'            : cfg.KEYSTONE_USERNAME,
-        'password'            : cfg.KEYSTONE_PASSWORD,
-        'auth_url'            : cfg.KEYSTONE_AUTH_URL,
-        'project_id'          : cfg.KEYSTONE_PROJECT_ID,
-        'project_name'        : cfg.KEYSTONE_PROJECT_NAME,
-        'domain_id'           : cfg.KEYSTONE_DOMAIN_ID,
-        'domain_name'         : cfg.KEYSTONE_DOMAIN_NAME,
-        'user_domain_id'      : cfg.KEYSTONE_USER_DOMAIN_ID,
-        'user_domain_name'    : cfg.KEYSTONE_USER_DOMAIN_NAME,
-        'project_domain_id'   : cfg.KEYSTONE_PROJECT_DOMAIN_ID,
-        'project_domain_name' : cfg.KEYSTONE_PROJECT_DOMAIN_NAME
+        'username': cfg.KEYSTONE_USERNAME,
+        'password': cfg.KEYSTONE_PASSWORD,
+        'auth_url': cfg.KEYSTONE_AUTH_URL,
+        'project_id': cfg.KEYSTONE_PROJECT_ID,
+        'project_name': cfg.KEYSTONE_PROJECT_NAME,
+        'domain_id': cfg.KEYSTONE_DOMAIN_ID,
+        'domain_name': cfg.KEYSTONE_DOMAIN_NAME,
+        'user_domain_id': cfg.KEYSTONE_USER_DOMAIN_ID,
+        'user_domain_name': cfg.KEYSTONE_USER_DOMAIN_NAME,
+        'project_domain_id': cfg.KEYSTONE_PROJECT_DOMAIN_ID,
+        'project_domain_name': cfg.KEYSTONE_PROJECT_DOMAIN_NAME
     }
 
     auth = v3.Password(**os_envs)

@@ -208,10 +208,10 @@ class CeilometerPollster(Pollster):
     @staticmethod
     def flatten_mongo_data(d):
         if type(d) is dict:
-            return dict(utils.flattenDict(d, join=lambda a,b: a + '.' + b))
+            return dict(utils.flattenDict(d, join=lambda a, b: a + '.' + b))
         elif type(d) is list:
             return list(
-                dict(utils.flattenDict(x, join=lambda a,b: a + '.' + b))
+                dict(utils.flattenDict(x, join=lambda a, b: a + '.' + b))
                 for x in d)
         else:
             raise RuntimeError("Don't know how to handle %s" % type(d))
@@ -238,7 +238,7 @@ class CPUTimePollster(CeilometerPollster):
             v = i[key]
             if v < v0:
                 logger.debug("Correcting monotonicity: %s, %d < %s, %d",
-                             i ,v, i0, v0)
+                             i, v, i0, v0)
                 # all the subsequent items will get the same correction
                 delta += abs(v - v0)
 

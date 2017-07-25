@@ -158,7 +158,8 @@ def setup_scheduler(parser):
                               # when to first run the job, regardless of
                               # the trigger (pass None to add the job as
                               # paused)
-                              #next_run_time=None,
+                              #
+                              # next_run_time=None,
 
                               **cron_kwargs)
 

@@ -166,7 +166,7 @@ class HypervisorsStateJob(Job):
 
         h_ram = hypervisor_data['memory_mb'] * utils.u1_M * h_status
         add_sample(metrics.METRIC_HYPERVISOR_RAM_TOTAL, h_ram)
-        add_sample(metrics.METRIC_HYPERVISOR_MEMORY_TOTAL, h_ram * ram_ar )
+        add_sample(metrics.METRIC_HYPERVISOR_MEMORY_TOTAL, h_ram * ram_ar)
         add_sample(metrics.METRIC_HYPERVISOR_MEMORY_USED,
                    hypervisor_data['memory_mb_used'] * utils.u1_M)
 

@@ -109,7 +109,8 @@ def integrate(x, y):
     return numpy.trapz(x=x, y=y)
 
 
-### Flat dict
+# Flat dict
+#
 # Taken from
 # http://stackoverflow.com/questions/6027558/flatten-nested-python-dictionaries-compressing-keys
 
@@ -152,7 +153,7 @@ def flattenDict(d, join=add, lift=lambda x: x):
 
     def visit(subdict, results, partialKey):
         for k, v in subdict.items():
-            newKey = lift(k) if partialKey == _FLAG_FIRST else join(partialKey, lift(k)) # noqa: E501
+            newKey = lift(k) if partialKey == _FLAG_FIRST else join(partialKey, lift(k))  # noqa: E501
 
             if isinstance(v, Mapping):
                 visit(v, results, newKey)

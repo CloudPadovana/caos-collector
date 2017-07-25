@@ -298,7 +298,7 @@ def create_tag_metadata(key, value, metadata, timestamp=None):
         metadata
       }
     }
-    ''' # noqa: E501
+    '''  # noqa: E501
 
     variables = {
         'tag': {
@@ -381,7 +381,7 @@ mutation($series: SeriesPrimary!, $timestamp: Datetime!, $value: Float!, $overwr
     value
   }
 }
-''' # noqa: E501
+'''  # noqa: E501
 
     variables = {
         'series': {
