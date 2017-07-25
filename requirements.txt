@@ -1,4 +1,4 @@
-setuptools ~= 35.0
+setuptools ~= 36.2
 pbr ~= 3.0
 
 apscheduler ~= 3.3
@@ -9,4 +9,4 @@ requests ~= 2.12
 semver ~= 2.7
 
 python-keystoneclient ~= 3.10
-python-novaclient ~= 2.30
+python-novaclient ~= 9.0
