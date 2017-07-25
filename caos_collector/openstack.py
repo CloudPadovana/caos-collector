@@ -94,7 +94,8 @@ def projects(domain_id=None):
             logger.warning("Domain filtering not implemented")
         keystone_projects = keystone.tenants.list()
     else:
-        raise RuntimeError("Unknown keystoneclient version: '%s'" % keystone.version)
+        raise RuntimeError("Unknown keystoneclient version: '{version}'"
+                           .format(version=keystone.version))
     keystone_projects = dict((p.id, p.to_dict()) for p in keystone_projects)
     return keystone_projects
 
@@ -105,7 +106,8 @@ def project(project_id):
     if keystone.version == 'v3':
         keystone_project = keystone.projects.get(project=project_id)
     else:
-        raise RuntimeError("Unknown keystoneclient version: '%s'" % keystone.version)
+        raise RuntimeError("Unknown keystoneclient version: '{version}'"
+                           .format(version=keystone.version))
     ret = {
         project_id: keystone_project.to_dict()
     }
@@ -125,7 +127,8 @@ def hypervisors(detailed=False):
     nova = get_nova_client()
 
     nova_hypervisors = nova.hypervisors.list(detailed=detailed)
-    nova_hypervisors = dict((h.hypervisor_hostname, h.to_dict()) for h in nova_hypervisors)
+    nova_hypervisors = dict(
+        (h.hypervisor_hostname, h.to_dict()) for h in nova_hypervisors)
     return nova_hypervisors
 
 

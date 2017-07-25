@@ -156,9 +156,13 @@ class HypervisorsStateJob(Job):
         add_sample(metrics.METRIC_HYPERVISOR_CPUS_TOTAL, h_cpus)
 
         add_sample(metrics.METRIC_HYPERVISOR_VCPUS_TOTAL, h_cpus * cpu_ar)
-        add_sample(metrics.METRIC_HYPERVISOR_VCPUS_USED, hypervisor_data['vcpus_used'])
+        add_sample(
+            metrics.METRIC_HYPERVISOR_VCPUS_USED,
+            hypervisor_data['vcpus_used'])
 
-        add_sample(metrics.METRIC_HYPERVISOR_RUNNING_VMS, hypervisor_data['running_vms'])
+        add_sample(
+            metrics.METRIC_HYPERVISOR_RUNNING_VMS,
+            hypervisor_data['running_vms'])
 
         h_ram = hypervisor_data['memory_mb'] * utils.u1_M * h_status
         add_sample(metrics.METRIC_HYPERVISOR_RAM_TOTAL, h_ram)
@@ -175,7 +179,9 @@ class HypervisorsStateJob(Job):
         add_sample(metrics.METRIC_HYPERVISOR_DISK_FREE_LEAST,
                    hypervisor_data['disk_available_least'] * utils.u1_G)
 
-        add_sample(metrics.METRIC_HYPERVISOR_WORKLOAD, hypervisor_data['current_workload'])
+        add_sample(
+            metrics.METRIC_HYPERVISOR_WORKLOAD,
+            hypervisor_data['current_workload'])
 
         if not h_state:
             return

@@ -48,9 +48,10 @@ def initialize():
     logger.info("Connecting to: %s." % mongodb)
     global _mongo
     try:
-        _mongo = pymongo.MongoClient(mongodb,
-                                     connectTimeoutMS=connect_timeout*1000,
-                                     serverSelectionTimeoutMS=connect_timeout*1000)
+        _mongo = pymongo.MongoClient(
+            mongodb,
+            connectTimeoutMS=connect_timeout*1000,
+            serverSelectionTimeoutMS=connect_timeout*1000)
         server_info = _mongo.server_info()
     except pymongo.errors.ServerSelectionTimeoutError as e:
         raise ConnectionError(e)

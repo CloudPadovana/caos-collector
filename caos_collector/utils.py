@@ -110,7 +110,8 @@ def integrate(x, y):
 
 
 ### Flat dict
-# Taken from http://stackoverflow.com/questions/6027558/flatten-nested-python-dictionaries-compressing-keys
+# Taken from
+# http://stackoverflow.com/questions/6027558/flatten-nested-python-dictionaries-compressing-keys
 
 # >>> testData = {
 #     'a':1,
@@ -135,7 +136,7 @@ def integrate(x, y):
 # >>> pp(dict( flattenDict(testData, join=lambda a,b:a+'_'+b) ))
 # {'a': 1, 'b': 2, 'c_aa': 11, 'c_bb': 22, 'c_cc_aaa': 111}
 #
-# >>> pp(dict( (v,k) for k,v in flattenDict(testData, lift=hash, join=lambda a,b:hash((a,b))) ))
+# >>> pp(dict( (v,k) for k,v in flattenDict(testData, lift=hash, join=lambda a,b:hash((a,b))) )) # noqa: E501
 # {1: 12416037344,
 #  2: 12544037731,
 #  11: 5470935132935744593,
@@ -151,7 +152,8 @@ def flattenDict(d, join=add, lift=lambda x: x):
 
     def visit(subdict, results, partialKey):
         for k, v in subdict.items():
-            newKey = lift(k) if partialKey == _FLAG_FIRST else join(partialKey, lift(k))
+            newKey = lift(k) if partialKey == _FLAG_FIRST else join(partialKey, lift(k)) # noqa: E501
+
             if isinstance(v, Mapping):
                 visit(v, results, newKey)
             else:
