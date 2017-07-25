@@ -154,30 +154,3 @@ def nova_usage(start, end, project_id):
                                 start=start,
                                 end=end)
     return nova_usage.to_dict()
-
-
-
-
-
-
-
-
-
-#l =  nova.servers.list()
-    #for i in l:
-    #    print i
-
-
- #    search_opts={'all_tenants': 1})
- # def list(self, detailed=True, search_opts=None, marker=None, limit=None,
- #             sort_keys=None, sort_dirs=None):
- #        """
- #        Get a list of servers.
-
- #        :param detailed: Whether to return detailed server info (optional).
- #        :param search_opts: Search options to filter out servers (optional).
- #        :param marker: Begin returning servers that appear later in the server
- #                       list than that represented by this server id (optional).
- #        :param limit: Maximum number of servers to return (optional).
- #        :param sort_keys: List of sort keys
- #        :param sort_dirs: List of sort directions
