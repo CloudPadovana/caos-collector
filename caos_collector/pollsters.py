@@ -188,10 +188,10 @@ class CeilometerPollster(Pollster):
     def interpolate_value(samples, timestamp, key):
         epoch = utils.EPOCH
 
-        x = list((s['timestamp']-epoch).total_seconds() for s in samples)
+        x = list((s['timestamp'] - epoch).total_seconds() for s in samples)
         y = list(s[key] for s in samples)
 
-        x0 = (timestamp-epoch).total_seconds()
+        x0 = (timestamp - epoch).total_seconds()
         y0 = utils.interp(x, y, x0)
         return y0
 
@@ -199,7 +199,7 @@ class CeilometerPollster(Pollster):
     def integrate_value(samples, key):
         epoch = utils.EPOCH
 
-        x = list((s['timestamp']-epoch).total_seconds() for s in samples)
+        x = list((s['timestamp'] - epoch).total_seconds() for s in samples)
         y = list(s[key] for s in samples)
 
         I = utils.integrate(x, y)
@@ -208,10 +208,10 @@ class CeilometerPollster(Pollster):
     @staticmethod
     def flatten_mongo_data(d):
         if type(d) is dict:
-            return dict(utils.flattenDict(d, join=lambda a,b: a+'.'+b))
+            return dict(utils.flattenDict(d, join=lambda a,b: a + '.' + b))
         elif type(d) is list:
             return list(
-                dict(utils.flattenDict(x, join=lambda a,b: a+'.'+b))
+                dict(utils.flattenDict(x, join=lambda a,b: a + '.' + b))
                 for x in d)
         else:
             raise RuntimeError("Don't know how to handle %s" % type(d))
@@ -240,7 +240,7 @@ class CPUTimePollster(CeilometerPollster):
                 logger.debug("Correcting monotonicity: %s, %d < %s, %d",
                              i ,v, i0, v0)
                 # all the subsequent items will get the same correction
-                delta += abs(v-v0)
+                delta += abs(v - v0)
 
             i[key] = v + delta
             ret.append(i)
@@ -271,7 +271,7 @@ class CPUTimePollster(CeilometerPollster):
         v1 = self.interpolate_value(samples, timestamp=self.start, key=key)
         v2 = self.interpolate_value(samples, timestamp=self.end, key=key)
 
-        ret = (v2-v1)/1e9
+        ret = (v2 - v1) / 1e9
         return ret
 
     def aggregate_values(self, values):
@@ -326,7 +326,7 @@ class WallClockTimePollster(CeilometerPollster):
         v1 = self.interpolate_value([s1, s2], timestamp=self.start, key=key)
         v2 = self.interpolate_value([s1, s2], timestamp=self.end, key=key)
 
-        ret = v2-v1
+        ret = v2 - v1
         return ret
 
     def aggregate_values(self, values):
