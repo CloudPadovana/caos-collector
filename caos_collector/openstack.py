@@ -33,7 +33,6 @@ from novaclient import exceptions as nova_client_exceptions
 
 import cfg
 import log
-import utils
 
 
 logger = log.get_logger(__name__)
@@ -50,17 +49,17 @@ def initialize():
     global _keystone_session
 
     os_envs = {
-        'username'            : cfg.KEYSTONE_USERNAME,
-        'password'            : cfg.KEYSTONE_PASSWORD,
-        'auth_url'            : cfg.KEYSTONE_AUTH_URL,
-        'project_id'          : cfg.KEYSTONE_PROJECT_ID,
-        'project_name'        : cfg.KEYSTONE_PROJECT_NAME,
-        'domain_id'           : cfg.KEYSTONE_DOMAIN_ID,
-        'domain_name'         : cfg.KEYSTONE_DOMAIN_NAME,
-        'user_domain_id'      : cfg.KEYSTONE_USER_DOMAIN_ID,
-        'user_domain_name'    : cfg.KEYSTONE_USER_DOMAIN_NAME,
-        'project_domain_id'   : cfg.KEYSTONE_PROJECT_DOMAIN_ID,
-        'project_domain_name' : cfg.KEYSTONE_PROJECT_DOMAIN_NAME
+        'username': cfg.KEYSTONE_USERNAME,
+        'password': cfg.KEYSTONE_PASSWORD,
+        'auth_url': cfg.KEYSTONE_AUTH_URL,
+        'project_id': cfg.KEYSTONE_PROJECT_ID,
+        'project_name': cfg.KEYSTONE_PROJECT_NAME,
+        'domain_id': cfg.KEYSTONE_DOMAIN_ID,
+        'domain_name': cfg.KEYSTONE_DOMAIN_NAME,
+        'user_domain_id': cfg.KEYSTONE_USER_DOMAIN_ID,
+        'user_domain_name': cfg.KEYSTONE_USER_DOMAIN_NAME,
+        'project_domain_id': cfg.KEYSTONE_PROJECT_DOMAIN_ID,
+        'project_domain_name': cfg.KEYSTONE_PROJECT_DOMAIN_NAME
     }
 
     auth = v3.Password(**os_envs)
@@ -95,7 +94,8 @@ def projects(domain_id=None):
             logger.warning("Domain filtering not implemented")
         keystone_projects = keystone.tenants.list()
     else:
-        raise RuntimeError("Unknown keystoneclient version: '%s'" % keystone.version)
+        raise RuntimeError("Unknown keystoneclient version: '{version}'"
+                           .format(version=keystone.version))
     keystone_projects = dict((p.id, p.to_dict()) for p in keystone_projects)
     return keystone_projects
 
@@ -106,7 +106,8 @@ def project(project_id):
     if keystone.version == 'v3':
         keystone_project = keystone.projects.get(project=project_id)
     else:
-        raise RuntimeError("Unknown keystoneclient version: '%s'" % keystone.version)
+        raise RuntimeError("Unknown keystoneclient version: '{version}'"
+                           .format(version=keystone.version))
     ret = {
         project_id: keystone_project.to_dict()
     }
@@ -126,7 +127,8 @@ def hypervisors(detailed=False):
     nova = get_nova_client()
 
     nova_hypervisors = nova.hypervisors.list(detailed=detailed)
-    nova_hypervisors = dict((h.hypervisor_hostname, h.to_dict()) for h in nova_hypervisors)
+    nova_hypervisors = dict(
+        (h.hypervisor_hostname, h.to_dict()) for h in nova_hypervisors)
     return nova_hypervisors
 
 
@@ -152,30 +154,3 @@ def nova_usage(start, end, project_id):
                                 start=start,
                                 end=end)
     return nova_usage.to_dict()
-
-
-
-
-
-
-
-
-
-#l =  nova.servers.list()
-    #for i in l:
-    #    print i
-
-
- #    search_opts={'all_tenants': 1})
- # def list(self, detailed=True, search_opts=None, marker=None, limit=None,
- #             sort_keys=None, sort_dirs=None):
- #        """
- #        Get a list of servers.
-
- #        :param detailed: Whether to return detailed server info (optional).
- #        :param search_opts: Search options to filter out servers (optional).
- #        :param marker: Begin returning servers that appear later in the server
- #                       list than that represented by this server id (optional).
- #        :param limit: Maximum number of servers to return (optional).
- #        :param sort_keys: List of sort keys
- #        :param sort_dirs: List of sort directions

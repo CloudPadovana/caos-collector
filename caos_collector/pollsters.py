@@ -24,7 +24,7 @@
 #
 ################################################################################
 
-from pymongo import ASCENDING, DESCENDING
+from pymongo import ASCENDING
 from bson import SON
 import datetime
 
@@ -89,13 +89,16 @@ class CeilometerPollster(Pollster):
         return []
 
     def find_resources(self):
-        start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period)
-        end = self.end + datetime.timedelta(seconds=self.ceilometer_polling_period)
+        start = (self.start
+                 - datetime.timedelta(seconds=self.ceilometer_polling_period))
+        end = (self.end
+               + datetime.timedelta(seconds=self.ceilometer_polling_period))
 
         resources = ceilometer.find_resources(project_id=self.project_id,
                                               meter=self.counter_name,
                                               start=start, end=end)
-        logger.debug("Project {id} has {n} resources of type {type} in the range from {start} to {end}"
+        logger.debug("Project {id} has {n} resources of type {type} "
+                     "in the range from {start} to {end}"
                      .format(id=self.project_id,
                              n=len(resources),
                              type=self.counter_name,
@@ -113,7 +116,9 @@ class CeilometerPollster(Pollster):
                 '$in': resources
             }))
         else:
-            raise RuntimeError("Wrong argument resources: %s of type %s" % (resources, type(resources)))
+            raise RuntimeError(
+                "Wrong argument resources: {resource} of type {type}"
+                .format(resource=resources, type=type(resources)))
 
         query_list.extend([
             ('project_id', self.project_id),
@@ -138,13 +143,20 @@ class CeilometerPollster(Pollster):
         # ceilometer_polling_period. Then we interpolate according to
         # our period.
         timestamp_query = {
-            '$gte': self.start - datetime.timedelta(seconds=self.ceilometer_polling_period),
-            '$lte': self.end   + datetime.timedelta(seconds=self.ceilometer_polling_period)
+            '$gte': (
+                self.start
+                - datetime.timedelta(seconds=self.ceilometer_polling_period)
+            ),
+            '$lte': (
+                self.end
+                + datetime.timedelta(seconds=self.ceilometer_polling_period)
+            )
         }
 
         # find samples
         query = self.build_query(resources, timestamp_query=timestamp_query)
-        cursor = ceilometer.find("meter", query, projection).sort('timestamp', ASCENDING)
+        cursor = (ceilometer.find("meter", query, projection)
+                  .sort('timestamp', ASCENDING))
         allsamples = list(cursor)
 
         if '.' in self._counter_value_field():
@@ -155,8 +167,10 @@ class CeilometerPollster(Pollster):
             logger.debug("Aggregating resource {id}"
                          .format(id=resource_id))
 
-            samples = list(s for s in allsamples if s['resource_id'] == resource_id)
-            v = self.aggregate_resource(samples, key=self._counter_value_field())
+            samples = list(
+                s for s in allsamples if s['resource_id'] == resource_id)
+            v = self.aggregate_resource(samples,
+                                        key=self._counter_value_field())
             if v is None:
                 logger.debug("Missing data for resource {id}"
                              .format(id=resource_id))
@@ -174,10 +188,10 @@ class CeilometerPollster(Pollster):
     def interpolate_value(samples, timestamp, key):
         epoch = utils.EPOCH
 
-        x = list((s['timestamp']-epoch).total_seconds() for s in samples)
+        x = list((s['timestamp'] - epoch).total_seconds() for s in samples)
         y = list(s[key] for s in samples)
 
-        x0 = (timestamp-epoch).total_seconds()
+        x0 = (timestamp - epoch).total_seconds()
         y0 = utils.interp(x, y, x0)
         return y0
 
@@ -185,7 +199,7 @@ class CeilometerPollster(Pollster):
     def integrate_value(samples, key):
         epoch = utils.EPOCH
 
-        x = list((s['timestamp']-epoch).total_seconds() for s in samples)
+        x = list((s['timestamp'] - epoch).total_seconds() for s in samples)
         y = list(s[key] for s in samples)
 
         I = utils.integrate(x, y)
@@ -194,9 +208,11 @@ class CeilometerPollster(Pollster):
     @staticmethod
     def flatten_mongo_data(d):
         if type(d) is dict:
-            return dict(utils.flattenDict(d, join=lambda a,b: a+'.'+b))
+            return dict(utils.flattenDict(d, join=lambda a, b: a + '.' + b))
         elif type(d) is list:
-            return list(dict(utils.flattenDict(x, join=lambda a,b: a+'.'+b)) for x in d)
+            return list(
+                dict(utils.flattenDict(x, join=lambda a, b: a + '.' + b))
+                for x in d)
         else:
             raise RuntimeError("Don't know how to handle %s" % type(d))
 
@@ -221,9 +237,10 @@ class CPUTimePollster(CeilometerPollster):
         for i in items[1:]:
             v = i[key]
             if v < v0:
-                logger.debug("Correcting monotonicity: %s, %d < %s, %d", i ,v, i0, v0)
+                logger.debug("Correcting monotonicity: %s, %d < %s, %d",
+                             i, v, i0, v0)
                 # all the subsequent items will get the same correction
-                delta += abs(v-v0)
+                delta += abs(v - v0)
 
             i[key] = v + delta
             ret.append(i)
@@ -254,7 +271,7 @@ class CPUTimePollster(CeilometerPollster):
         v1 = self.interpolate_value(samples, timestamp=self.start, key=key)
         v2 = self.interpolate_value(samples, timestamp=self.end, key=key)
 
-        ret = (v2-v1)/1e9
+        ret = (v2 - v1) / 1e9
         return ret
 
     def aggregate_values(self, values):
@@ -309,7 +326,7 @@ class WallClockTimePollster(CeilometerPollster):
         v1 = self.interpolate_value([s1, s2], timestamp=self.start, key=key)
         v2 = self.interpolate_value([s1, s2], timestamp=self.end, key=key)
 
-        ret = v2-v1
+        ret = v2 - v1
         return ret
 
     def aggregate_values(self, values):

@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@
 #
 ################################################################################
 
-import types
-import warnings
 import pymongo
 from bson import SON
 
@@ -43,15 +41,17 @@ _db = None
 class ConnectionError(Exception):
     pass
 
+
 def initialize():
     mongodb = cfg.CEILOMETER_MONGODB
     connect_timeout = cfg.CEILOMETER_MONGODB_CONNECTION_TIMEOUT
     logger.info("Connecting to: %s." % mongodb)
     global _mongo
     try:
-        _mongo = pymongo.MongoClient(mongodb,
-                                     connectTimeoutMS=connect_timeout*1000,
-                                     serverSelectionTimeoutMS=connect_timeout*1000)
+        _mongo = pymongo.MongoClient(
+            mongodb,
+            connectTimeoutMS=connect_timeout * 1000,
+            serverSelectionTimeoutMS=connect_timeout * 1000)
         server_info = _mongo.server_info()
     except pymongo.errors.ServerSelectionTimeoutError as e:
         raise ConnectionError(e)

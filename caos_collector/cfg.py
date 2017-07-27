@@ -112,8 +112,9 @@ def _parse_cfg():
                                                   required=False))
     _assign('KEYSTONE_PROJECT_DOMAIN_ID', _get_str("keystone.project_domain_id",
                                                    required=False))
-    _assign('KEYSTONE_PROJECT_DOMAIN_NAME', _get_str("keystone.project_domain_name",
-                                                     required=False))
+    _assign('KEYSTONE_PROJECT_DOMAIN_NAME',
+            _get_str("keystone.project_domain_name",
+                     required=False))
     _assign('KEYSTONE_CACERT', _get_str("keystone.cacert"))
     _assign('KEYSTONE_API_VERSION',
             _get_str("keystone.identity_api_version",

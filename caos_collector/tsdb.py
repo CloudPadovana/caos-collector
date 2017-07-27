@@ -91,7 +91,10 @@ def _check_version_rules(version, rules):
     ret = True
     for rule in rules:
         r = semver.match(version, rule)
-        logger.debug("Checking if %s%s: %s", version, rule, "OK" if r else "Failed")
+        logger.debug("Checking if {version}{rule}: {ret}"
+                     .format(version=version,
+                             rule=rule,
+                             ret="OK" if r else "Failed"))
         ret = ret and r
     return ret
 
@@ -151,7 +154,8 @@ def _request(rest_type, api, data=None, params=None):
     except requests.exceptions.ConnectionError as e:
         raise ConnectionError(e)
 
-    logger.debug("REST request: %s %s params=%s json=%s" % (rest_type, url, params, data))
+    logger.debug("REST request: {type} {url} params={params} json={json}"
+                 .format(type=rest_type, url=url, params=params, json=data))
     json = r.json()
     logger.debug("REST status: %s json=%s", r.status_code, json)
 
@@ -294,7 +298,7 @@ def create_tag_metadata(key, value, metadata, timestamp=None):
         metadata
       }
     }
-    '''
+    '''  # noqa: E501
 
     variables = {
         'tag': {
@@ -377,7 +381,7 @@ mutation($series: SeriesPrimary!, $timestamp: Datetime!, $value: Float!, $overwr
     value
   }
 }
-'''
+'''  # noqa: E501
 
     variables = {
         'series': {
@@ -392,8 +396,15 @@ mutation($series: SeriesPrimary!, $timestamp: Datetime!, $value: Float!, $overwr
         'overwrite': overwrite,
     }
 
-    logger.info("Creating new sample for metric {metric}, period {period}, tags {tags}, timestampe {timestamp}, value {value}, overwrite {overwrite}"
-                .format(metric=metric_name, period=period, tags=tags, timestamp=timestamp, value=value, overwrite=overwrite))
+    logger.info("Creating new sample for metric {metric}, period {period}, "
+                "tags {tags}, timestampe {timestamp}, value {value}, "
+                "overwrite {overwrite}"
+                .format(metric=metric_name,
+                        period=period,
+                        tags=tags,
+                        timestamp=timestamp,
+                        value=value,
+                        overwrite=overwrite))
 
     return graphql(query, variables)['sample']
 

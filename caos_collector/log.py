@@ -32,7 +32,8 @@ from . import __package_name__
 import cfg
 
 
-_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+_formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 def get_root_logger():

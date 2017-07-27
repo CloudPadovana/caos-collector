@@ -99,7 +99,7 @@ def get_job_instance(name):
 
 
 def run_scheduler(scheduler_name, parser):
-    if not scheduler_name in cfg.SCHEDULERS:
+    if scheduler_name not in cfg.SCHEDULERS:
         logger.error("Scheduler '{name}' not found in configuration file"
                      .format(name=scheduler_name))
         sys.exit(1)
@@ -158,7 +158,8 @@ def setup_scheduler(parser):
                               # when to first run the job, regardless of
                               # the trigger (pass None to add the job as
                               # paused)
-                              #next_run_time=None,
+                              #
+                              # next_run_time=None,
 
                               **cron_kwargs)
 

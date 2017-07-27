@@ -24,7 +24,6 @@
 #
 ################################################################################
 
-import datetime
 import signal
 import StringIO
 import sys
@@ -32,7 +31,6 @@ import sys
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 
-import cfg
 import log
 
 

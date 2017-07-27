@@ -116,7 +116,8 @@ class VMUsageJob(Job):
 
         end = utils.parse_date(args.end)
         if end < start:
-            self.logger.warn("End date is before start date. Resetting to start date.")
+            self.logger.warn(
+                "End date is before start date. Resetting to start date.")
             end = start
 
         overwrite = args.overwrite
@@ -138,11 +139,12 @@ class VMUsageJob(Job):
             grid = self._grid(start=start, end=end, period=period,
                               current=args.current, misfire=False)
             for ts in grid:
-                self.check_nova_usage(project_id=project_id,
-                                      period=period,
-                                      end=ts,
-                                      start=ts - datetime.timedelta(seconds=period),
-                                      overwrite=overwrite)
+                self.check_nova_usage(
+                    project_id=project_id,
+                    period=period,
+                    end=ts,
+                    start=ts - datetime.timedelta(seconds=period),
+                    overwrite=overwrite)
 
             last_timestamp = tsdb.last_timestamp(
                 tags=[{'key': cfg.CAOS_PROJECT_TAG_KEY,
@@ -150,15 +152,21 @@ class VMUsageJob(Job):
                 metric_name=metrics.METRIC_VM_CPU_TIME_USAGE,
                 period=period)
 
-            grid = self._grid(start=start, end=end, period=period, current=args.current,
-                              misfire=args.misfire, last_timestamp=last_timestamp)
+            grid = self._grid(
+                start=start,
+                end=end,
+                period=period,
+                current=args.current,
+                misfire=args.misfire,
+                last_timestamp=last_timestamp)
 
             for ts in grid:
-                self.check_cpu_time(project_id=project_id,
-                                    period=period,
-                                    end=ts,
-                                    start=ts - datetime.timedelta(seconds=period),
-                                    overwrite=overwrite)
+                self.check_cpu_time(
+                    project_id=project_id,
+                    period=period,
+                    end=ts,
+                    start=ts - datetime.timedelta(seconds=period),
+                    overwrite=overwrite)
 
             last_timestamp = tsdb.last_timestamp(
                 tags=[{'key': cfg.CAOS_PROJECT_TAG_KEY,
@@ -166,19 +174,26 @@ class VMUsageJob(Job):
                 metric_name=metrics.METRIC_VM_WALLCLOCK_TIME_USAGE,
                 period=period)
 
-            grid = self._grid(start=start, end=end, period=period, current=args.current,
-                              misfire=args.misfire, last_timestamp=last_timestamp)
+            grid = self._grid(
+                start=start,
+                end=end,
+                period=period,
+                current=args.current,
+                misfire=args.misfire,
+                last_timestamp=last_timestamp)
 
             for ts in grid:
-                self.check_wallckock_time(project_id=project_id,
-                                          period=period,
-                                          end=ts,
-                                          start=ts - datetime.timedelta(seconds=period),
-                                          overwrite=overwrite)
+                self.check_wallckock_time(
+                    project_id=project_id,
+                    period=period,
+                    end=ts,
+                    start=ts - datetime.timedelta(seconds=period),
+                    overwrite=overwrite)
 
             self.logger.info("VM usages updated")
 
-    def _grid(self, start, end, period, current, misfire, last_timestamp=utils.EPOCH):
+    def _grid(self, start, end, period, current, misfire,
+              last_timestamp=utils.EPOCH):
         if current:
             now = datetime.datetime.utcnow()
             end = now + datetime.timedelta(seconds=period)
@@ -196,8 +211,9 @@ class VMUsageJob(Job):
         # last_timestamp, then we collect (also respecting the misfire
         # grace time).
         if last_timestamp < end - datetime.timedelta(seconds=misfire):
-            self.logger.info("Dropping history collection due to misfire grace time={m}"
-                             .format(m=misfire))
+            self.logger.info(
+                "Dropping history collection due to misfire grace time={m}"
+                .format(m=misfire))
 
             last_timestamp = end - datetime.timedelta(seconds=misfire)
 
@@ -209,8 +225,9 @@ class VMUsageJob(Job):
         return grid
 
     def check_nova_usage(self, project_id, period, start, end, overwrite):
-        self.logger.info("Checking nova usages for project {id} from {s} to {e}"
-                         .format(id=project_id, name=project_id, s=start, e=end))
+        self.logger.info(
+            "Checking nova usages for project {id} from {s} to {e}"
+            .format(id=project_id, name=project_id, s=start, e=end))
 
         usage = openstack.nova_usage(start=start, end=end,
                                      project_id=project_id)
@@ -229,20 +246,22 @@ class VMUsageJob(Job):
                                overwrite=overwrite)
 
         if 'total_local_gb_usage' in usage:
-            tsdb.create_sample(metric_name=metrics.METRIC_VM_DISK_USAGE,
-                               period=period,
-                               tags=[tag],
-                               timestamp=end,
-                               value=usage['total_local_gb_usage'] * utils.u1_G * utils.u1_hour,
-                               overwrite=overwrite)
+            tsdb.create_sample(
+                metric_name=metrics.METRIC_VM_DISK_USAGE,
+                period=period,
+                tags=[tag],
+                timestamp=end,
+                value=usage['total_local_gb_usage'] * utils.u1_G * utils.u1_hour,  # noqa: E501
+                overwrite=overwrite)
 
         if 'total_memory_mb_usage' in usage:
-            tsdb.create_sample(metric_name=metrics.METRIC_VM_MEMORY_USAGE,
-                               period=period,
-                               tags=[tag],
-                               timestamp=end,
-                               value=usage['total_memory_mb_usage'] * utils.u1_M * utils.u1_hour,
-                               overwrite=overwrite)
+            tsdb.create_sample(
+                metric_name=metrics.METRIC_VM_MEMORY_USAGE,
+                period=period,
+                tags=[tag],
+                timestamp=end,
+                value=usage['total_memory_mb_usage'] * utils.u1_M * utils.u1_hour,  # noqa: E501
+                overwrite=overwrite)
 
         instances = []
         deleted_instances = []
@@ -269,8 +288,9 @@ class VMUsageJob(Job):
                            overwrite=overwrite)
 
     def check_cpu_time(self, project_id, period, start, end, overwrite):
-        self.logger.info("Checking cpu time for project {id} from {s} to {e}"
-                         .format(id=project_id, name=project_id, s=start, e=end))
+        self.logger.info(
+            "Checking cpu time for project {id} from {s} to {e}"
+            .format(id=project_id, name=project_id, s=start, e=end))
 
         pollster = CPUTimePollster(project_id=project_id,
                                    period=period,
@@ -294,8 +314,9 @@ class VMUsageJob(Job):
                            value=sample)
 
     def check_wallckock_time(self, project_id, period, start, end, overwrite):
-        self.logger.info("Checking wallclocktime time for project {id} from {s} to {e}"
-                         .format(id=project_id, name=project_id, s=start, e=end))
+        self.logger.info(
+            "Checking wallclocktime time for project {id} from {s} to {e}"
+            .format(id=project_id, name=project_id, s=start, e=end))
 
         pollster = WallClockTimePollster(project_id=project_id,
                                          period=period,
