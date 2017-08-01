@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ################################################################################
 #
 # caos-collector - CAOS collector
@@ -21,21 +23,14 @@
 #
 ################################################################################
 
-FROM python:2.7
+set -e
 
-LABEL maintainer "Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>"
+source ${CI_PROJECT_DIR}/ci-tools/common.sh
 
-ARG RELEASE_FILE
-ADD $RELEASE_FILE /
+GIT_SHA=${CI_COMMIT_SHA:-${CI_COMMIT_REF}}
 
-WORKDIR /
+if [ -z "${GIT_SHA}" ] ; then
+    die "GIT_SHA not set"
+fi
 
-RUN pip install --no-cache-dir /$(basename ${RELEASE_FILE}) && \
-    rm -f /$(basename ${RELEASE_FILE})
-
-ENV LANG=C.UTF-8
-
-VOLUME /etc/caos
-
-ENTRYPOINT [ "caos_collector" ]
-CMD [ "--help" ]
+git describe --long ${GIT_SHA}
