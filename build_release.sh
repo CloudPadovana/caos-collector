@@ -57,7 +57,7 @@ docker_exec ${container_id} git checkout -f ${GIT_SHA}
 docker_exec ${container_id} ci-tools/prepare.sh
 docker_exec ${container_id} ci-tools/release-build.sh
 
-fname=${container_id}:/build/dist/caos_collector-$(CI_PROJECT_DIR=. CI_COMMIT_SHA=${GIT_SHA} ci-tools/git-semver-pbr.sh)-py2-none-any.whl
+fname=${container_id}:/build/releases/caos_collector-$(CI_PROJECT_DIR=. CI_COMMIT_SHA=${GIT_SHA} ci-tools/git-semver-pbr.sh)-py2-none-any.whl
 docker cp ${fname} ${releases_dir}/
 
 docker stop ${container_id}
