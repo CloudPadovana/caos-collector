@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ################################################################################
 #
 # caos-collector - CAOS collector
@@ -21,21 +23,18 @@
 #
 ################################################################################
 
-FROM python:2.7
+set -e
 
-LABEL maintainer "Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>"
+source ${CI_PROJECT_DIR}/ci-tools/common.sh
 
-ARG RELEASE_FILE
-ADD $RELEASE_FILE /
+git_version=$(ci-tools/git-describe.sh) || die
 
-WORKDIR /
+version=$(echo ${git_version} | awk '{ split($0, r, "-"); print r[1] }' | sed -e 's/^v//' )
+count=$(echo ${git_version} | awk '{ split($0, r, "-"); print r[2] }' )
+sha=$(echo ${git_version} | awk '{ split($0, r, "-"); print r[3] }' )
 
-RUN pip install --no-cache-dir /$(basename ${RELEASE_FILE}) && \
-    rm -f /$(basename ${RELEASE_FILE})
-
-ENV LANG=C.UTF-8
-
-VOLUME /etc/caos
-
-ENTRYPOINT [ "caos_collector" ]
-CMD [ "--help" ]
+if [ ${count} == 0 ] ; then
+    echo "${version}"
+else
+    echo "${version}.${count}+${sha}"
+fi

@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ################################################################################
 #
 # caos-collector - CAOS collector
@@ -21,21 +23,41 @@
 #
 ################################################################################
 
-FROM python:2.7
+set -e
 
-LABEL maintainer "Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>"
+ANSI_COLOR_GREEN="\033[32;1m"
+ANSI_COLOR_RED="\033[31;1m"
+ANSI_COLOR_YELLOW="\033[33;1m"
+ANSI_RESET="\033[0;m"
 
-ARG RELEASE_FILE
-ADD $RELEASE_FILE /
+function die () {
+    format=${1:-""}
+    shift
+    printf >&2 "${ANSI_COLOR_RED}${format}${ANSI_RESET}\n" "$@"
+    exit 1
+}
 
-WORKDIR /
+function say () {
+    format=${1:-""}
+    shift
+    printf "${format}\n" "$@"
+}
 
-RUN pip install --no-cache-dir /$(basename ${RELEASE_FILE}) && \
-    rm -f /$(basename ${RELEASE_FILE})
+function say_with_color () {
+    color=$1
+    format=$2
+    shift 2
+    say "${color}${format}${ANSI_RESET}" "$@"
+}
 
-ENV LANG=C.UTF-8
+function say_green () {
+    say_with_color ${ANSI_COLOR_GREEN} "$@"
+}
 
-VOLUME /etc/caos
+function say_red () {
+    say_with_color ${ANSI_COLOR_RED} "$@"
+}
 
-ENTRYPOINT [ "caos_collector" ]
-CMD [ "--help" ]
+function say_yellow () {
+    say_with_color ${ANSI_COLOR_YELLOW} "$@"
+}

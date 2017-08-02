@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ################################################################################
 #
 # caos-collector - CAOS collector
@@ -21,21 +23,18 @@
 #
 ################################################################################
 
-FROM python:2.7
+set -e
 
-LABEL maintainer "Fabrizio Chiarello <fabrizio.chiarello@pd.infn.it>"
+source ${CI_PROJECT_DIR}/ci-tools/common.sh
 
-ARG RELEASE_FILE
-ADD $RELEASE_FILE /
+export PBR_VERSION=$(ci-tools/git-semver-pbr.sh)
 
-WORKDIR /
+if [ -z "${PBR_VERSION}" ] ; then
+    die "PBR_VERSION not set."
+fi
 
-RUN pip install --no-cache-dir /$(basename ${RELEASE_FILE}) && \
-    rm -f /$(basename ${RELEASE_FILE})
+say_yellow "Upgrading pip"
+pip install --upgrade pip
 
-ENV LANG=C.UTF-8
-
-VOLUME /etc/caos
-
-ENTRYPOINT [ "caos_collector" ]
-CMD [ "--help" ]
+say_yellow "Installing tox"
+pip install tox
