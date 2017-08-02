@@ -25,20 +25,26 @@ image: python:2.7
 
 stages:
   - test
+  - release
+  - docker
 
-.job_template: &job_template
+variables: &variables
+  CI_DEBUG_TRACE: "false"
+
+.test_template: &test_template
   stage: test
+  variables: &test_template_variables
+    <<: *variables
   before_script:
-    - pip install --upgrade pip
-    - pip install tox
+    - ci-tools/prepare.sh
 
 test:
-  <<: *job_template
+  <<: *test_template
   script:
     - tox -e py27
 
 coverage:
-  <<: *job_template
+  <<: *test_template
   script:
     - tox -e coverage
   artifacts:
@@ -47,7 +53,68 @@ coverage:
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+\.?\d*)%/'
 
 pep8:
-  <<: *job_template
+  <<: *test_template
   script:
     - tox -e pep8
   allow_failure: true
+
+.release_template: &release_template
+  stage: release
+  variables:
+    <<: *variables
+  before_script:
+    - ci-tools/prepare.sh
+  script:
+    - ci-tools/release-build.sh
+
+release:build:
+  <<: *release_template
+  artifacts:
+    paths:
+      - releases/caos_collector-$(ci-tools/git-semver-pbr.sh)-py2-none-any.whl
+    expire_in: 1 day
+  except:
+    - master
+
+release:master:
+  <<: *release_template
+  artifacts:
+    paths:
+      - releases/caos_collector-$(ci-tools/git-semver-pbr.sh)-py2-none-any.whl
+  only:
+    - master
+
+.docker_template: &docker_template
+  image: docker:stable
+  stage: docker
+  services:
+    - docker:stable-dind
+  tags:
+    - docker-dind
+  variables: &docker_template_variables
+    <<: *variables
+    DOCKER_DRIVER: vfs
+  before_script:
+    - docker info
+    - apk add --no-cache bash git
+  script:
+    - ci-tools/docker-build.sh
+
+docker:build:
+  <<: *docker_template
+  variables:
+    <<: *docker_template_variables
+  dependencies:
+    - release:build
+  except:
+    - master
+
+docker:master:
+  <<: *docker_template
+  variables:
+    <<: *docker_template_variables
+    DO_DOCKER_PUSH: "true"
+  dependencies:
+    - release:master
+  only:
+    - master
