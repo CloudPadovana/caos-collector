@@ -33,4 +33,4 @@ if [ -z "${GIT_SHA}" ] ; then
     die "GIT_SHA not set"
 fi
 
-git describe --long ${GIT_SHA}
+git describe ${GIT_SHA}

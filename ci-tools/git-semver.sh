@@ -33,7 +33,7 @@ version=$(echo ${git_version} | awk '{ split($0, r, "-"); print r[1] }' | sed -e
 count=$(echo ${git_version} | awk '{ split($0, r, "-"); print r[2] }' )
 sha=$(echo ${git_version} | awk '{ split($0, r, "-"); print r[3] }' )
 
-if [ ${count} == 0 ] ; then
+if [ -z "${count}" ] ; then
     echo "${version}"
 else
     echo "${version}.${count}+${sha}"
