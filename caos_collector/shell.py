@@ -66,7 +66,7 @@ for job_name, job_class in _JOBS.items():
                                   .format(job=job_class))
 
 
-def setup_parser():
+def build_parser():
     parser = argparse.ArgumentParser(description=__description__,
                                      add_help=True)
 
@@ -98,7 +98,16 @@ def get_job_instance(name):
     return job_class()
 
 
-def run_scheduler(scheduler_name, parser):
+def run_job(cmdline):
+    parser = build_parser()
+    args = parser.parse_args(shlex.split(cmdline))
+    job_name = args.job
+    job_instance = get_job_instance(job_name)
+
+    job_instance.run_job(args)
+
+
+def run_scheduler(scheduler_name):
     if scheduler_name not in cfg.SCHEDULERS:
         logger.error("Scheduler '{name}' not found in configuration file"
                      .format(name=scheduler_name))
@@ -107,11 +116,7 @@ def run_scheduler(scheduler_name, parser):
     scheduler_cfg = cfg.SCHEDULERS[scheduler_name]
     jobs = scheduler_cfg['jobs']
     for cmdline in jobs:
-        args = parser.parse_args(shlex.split(cmdline))
-        job_name = args.job
-        job_instance = get_job_instance(job_name)
-
-        func = partial(job_instance.run_job, args)
+        func = partial(run_job, cmdline)
         logger.info("Running job {cmd_line} for scheduler {name}"
                     .format(name=scheduler_name, cmd_line=cmdline))
         func()
@@ -119,19 +124,14 @@ def run_scheduler(scheduler_name, parser):
                     .format(name=scheduler_name, cmd_line=cmdline))
 
 
-def setup_scheduler(parser):
+def setup_scheduler():
     scheduler.initialize()
 
     schedulers = cfg.SCHEDULERS
     for name, scheduler_cfg in schedulers.items():
         jobs = scheduler_cfg['jobs']
         for cmdline in jobs:
-            args = parser.parse_args(shlex.split(cmdline))
-            job_name = args.job
-            job_instance = get_job_instance(job_name)
-
-            func = partial(job_instance.run_job, args)
-
+            func = partial(run_job, cmdline)
             cron_kwargs = scheduler_cfg['cron_kwargs']
 
             scheduler.add_job(func=func,
@@ -166,7 +166,7 @@ def setup_scheduler(parser):
 
 
 def main():
-    parser = setup_parser()
+    parser = build_parser()
     args = parser.parse_args()
     cfg_file = args.cfg_file
     cfg.read(cfg_file)
@@ -175,13 +175,13 @@ def main():
 
     job_name = args.job
     if job_name == 'daemon':
-        setup_scheduler(parser)
+        setup_scheduler()
 
         # this is blocking!!!
         scheduler.main_loop()
 
     if job_name == 'run':
-        run_scheduler(job_name, parser)
+        run_scheduler(job_name)
         sys.exit(0)
 
     if job_name not in _JOBS:
