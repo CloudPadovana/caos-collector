@@ -30,6 +30,7 @@ import sys
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.events import EVENT_JOB_ERROR
 
 import log
 
@@ -64,12 +65,21 @@ def add_job(*args, **kwargs):
     _scheduler.add_job(*args, **kwargs)
 
 
+def error_listener(event):
+    if event.exception:
+        logger.error("Job ERROR: {exception} -- {trace}".format(
+            exception=event.exception, trace=event.traceback))
+
+
 def main_loop():
     def sigterm_handler(_signo, _stack_frame):
         # Raises SystemExit(0):
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, sigterm_handler)
+
+    # log errors
+    _scheduler.add_listener(error_listener, EVENT_JOB_ERROR)
 
     # this is blocking
     try:

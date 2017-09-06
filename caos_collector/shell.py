@@ -110,7 +110,6 @@ def run_scheduler(scheduler_name, parser):
         args = parser.parse_args(shlex.split(cmdline))
         job_name = args.job
         job_instance = get_job_instance(job_name)
-        job_instance.setup_logger(job_name)
 
         func = partial(job_instance.run_job, args)
         logger.info("Running job {cmd_line} for scheduler {name}"
@@ -130,7 +129,6 @@ def setup_scheduler(parser):
             args = parser.parse_args(shlex.split(cmdline))
             job_name = args.job
             job_instance = get_job_instance(job_name)
-            job_instance.setup_logger(job_name)
 
             func = partial(job_instance.run_job, args)
 

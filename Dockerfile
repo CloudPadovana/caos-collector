@@ -37,5 +37,8 @@ ENV LANG=C.UTF-8
 
 VOLUME /etc/caos
 
+RUN mkdir /var/log/caos
+VOLUME /var/log/caos
+
 ENTRYPOINT [ "caos_collector" ]
 CMD [ "--help" ]
