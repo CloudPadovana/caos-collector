@@ -96,7 +96,8 @@ def _parse_cfg():
     _assign('LOGGER_LOG_PATH',
             _get_str("logger.log.path", default=DEFAULT_LOGGER_LOG_PATH))
     _assign('LOGGER_ERROR_LOG_PATH',
-            _get_str("logger.error_log.path", default=DEFAULT_LOGGER_ERROR_LOG_PATH))
+            _get_str("logger.error_log.path",
+                     default=DEFAULT_LOGGER_ERROR_LOG_PATH))
 
     _assign('KEYSTONE_USERNAME', _get_str("keystone.username"))
     _assign('KEYSTONE_PASSWORD', _get_str("keystone.password"))

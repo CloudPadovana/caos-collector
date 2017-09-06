@@ -26,7 +26,6 @@
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
-import os
 
 from . import __package_name__
 import cfg
