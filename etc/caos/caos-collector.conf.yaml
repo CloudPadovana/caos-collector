@@ -1,6 +1,10 @@
 logger:
-  directory: /var/log/caos/collector.log
   rotate_keep_count: 30
+
+  log:
+    path: /var/log/caos/collector.log
+  error_log:
+    path: /var/log/caos/collector.error.log
 
 
 keystone:

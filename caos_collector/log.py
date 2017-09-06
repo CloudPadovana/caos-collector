@@ -49,56 +49,36 @@ def get_logger(name):
     return get_root_logger().getChild(name)
 
 
-def setup_root_logger():
-    log_dir = cfg.LOGGER_DIRECTORY
-
-    if not os.path.isdir(log_dir):
-        get_root_logger().info("Creating log dir %s", log_dir)
-        os.mkdir(log_dir)
-
-    logger = get_root_logger()
+def _setup_logger(logger):
     logger.setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(_formatter)
     logger.addHandler(ch)
+
+    ch = TimedRotatingFileHandler(cfg.LOGGER_LOG_PATH,
+                                  when='midnight',
+                                  backupCount=cfg.LOGGER_ROTATE_KEEP_COUNT,
+                                  utc=True)
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(_formatter)
+    logger.addHandler(ch)
+
+    ch = TimedRotatingFileHandler(cfg.LOGGER_ERROR_LOG_PATH,
+                                  when='midnight',
+                                  backupCount=cfg.LOGGER_ROTATE_KEEP_COUNT,
+                                  utc=True)
+    ch.setLevel(logging.ERROR)
+    ch.setFormatter(_formatter)
+    logger.addHandler(ch)
+
+
+def setup_root_logger():
+    logger = get_root_logger()
+    _setup_logger(logger)
 
 
 def setup_apscheduler_logger():
     logger = logging.getLogger('apscheduler')
-    logger.setLevel(logging.DEBUG)
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    ch.setFormatter(_formatter)
-    logger.addHandler(ch)
-
-
-def _setup_file_logger(name, filename, level):
-    logger = get_logger(name)
-
-    log_filename = "{log_dir}/{base_name}-{fname}.log".format(
-        log_dir=cfg.LOGGER_DIRECTORY,
-        base_name=__package_name__,
-        fname=filename)
-
-    ch = TimedRotatingFileHandler(log_filename,
-                                  when='midnight',
-                                  backupCount=cfg.LOGGER_ROTATE_KEEP_COUNT,
-                                  utc=True)
-
-    ch.setLevel(level)
-    ch.setFormatter(_formatter)
-
-    logger.addHandler(ch)
-
-    logger.info("Setup log for {name} to file {fname}".format(
-        name=name, fname=log_filename))
-
-
-def setup_file_logger(name, filename):
-    _setup_file_logger(name, filename, logging.DEBUG)
-
-    fname = "{fname}.errors".format(fname=filename)
-    _setup_file_logger(name, fname, logging.ERROR)
+    _setup_logger(logger)

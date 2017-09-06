@@ -42,9 +42,6 @@ class Job(object):
     def name(self):
         return self._name
 
-    def setup_logger(self, job_name):
-        log.setup_file_logger(self._name, job_name)
-
     @staticmethod
     def setup_parser(parser):
         raise NotImplementedError

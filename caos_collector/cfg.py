@@ -67,8 +67,9 @@ CEILOMETER_MONGODB = None
 CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
 CEILOMETER_POLLING_PERIOD = None
 
-LOGGER_DIRECTORY = None
 LOGGER_ROTATE_KEEP_COUNT = None
+LOGGER_LOG_PATH = None
+LOGGER_ERROR_LOG_PATH = None
 
 OPENSTACK_NOVA_API_VERSION = None
 
@@ -76,8 +77,9 @@ OPENSTACK_NOVA_API_VERSION = None
 DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 DEFAULT_KEYSTONE_API_VERSION = "v3"
 DEFAULT_OPENSTACK_NOVA_API_VERSION = "2"
-DEFAULT_LOGGER_DIRECTORY = "/var/log/caos/collector"
 DEFAULT_LOGGER_ROTATE_KEEP_COUNT = 30
+DEFAULT_LOGGER_LOG_PATH = "/var/log/caos/collector.log"
+DEFAULT_LOGGER_ERROR_LOG_PATH = "/var/log/caos/collector.error.log"
 
 # misc
 CAOS_DOMAIN_TAG_KEY = 'domain'
@@ -88,12 +90,13 @@ CAOS_PROJECT_TAG_KEY = 'project'
 def _parse_cfg():
     _assign('SCHEDULERS', _get_schedulers())
 
-    _assign('LOGGER_DIRECTORY',
-            _get_str("logger.directory", default=DEFAULT_LOGGER_DIRECTORY))
-
     _assign('LOGGER_ROTATE_KEEP_COUNT',
             _get_int("logger.rotate_keep_count",
                      default=DEFAULT_LOGGER_ROTATE_KEEP_COUNT))
+    _assign('LOGGER_LOG_PATH',
+            _get_str("logger.log.path", default=DEFAULT_LOGGER_LOG_PATH))
+    _assign('LOGGER_ERROR_LOG_PATH',
+            _get_str("logger.error_log.path", default=DEFAULT_LOGGER_ERROR_LOG_PATH))
 
     _assign('KEYSTONE_USERNAME', _get_str("keystone.username"))
     _assign('KEYSTONE_PASSWORD', _get_str("keystone.password"))
