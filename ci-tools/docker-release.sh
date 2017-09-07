@@ -31,15 +31,13 @@ export_version_vars
 
 docker_login
 
-CAOS_COLLECTOR_DOCKER_IMAGE_TAG=${CI_REGISTRY_IMAGE}:${CAOS_COLLECTOR_RELEASE_GIT_VERSION}-test
+CAOS_COLLECTOR_DOCKER_IMAGE_TAG=${CI_REGISTRY_IMAGE}:${CAOS_COLLECTOR_RELEASE_GIT_VERSION}
 
-say_yellow  "Building docker container"
-docker build \
-       --tag ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG} \
-       --build-arg RELEASE_FILE="releases/caos_collector-${PBR_VERSION}-py2-none-any.whl" \
-       --pull=true .
+say_yellow  "Pulling docker container"
+docker pull ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG}-test
 
-if [ "${DO_DOCKER_PUSH}" == true ] ; then
-    say_yellow "Pushing container"
-    docker push ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG}
-fi
+say_yellow  "Tagging docker container"
+docker tag ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG}-test  ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG}
+
+say_yellow "Pushing container"
+docker push ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG}

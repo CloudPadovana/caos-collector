@@ -23,7 +23,7 @@
 #
 ################################################################################
 
-set -e
+set -ex
 
 ANSI_COLOR_GREEN="\033[32;1m"
 ANSI_COLOR_RED="\033[31;1m"
@@ -60,4 +60,27 @@ function say_red () {
 
 function say_yellow () {
     say_with_color ${ANSI_COLOR_YELLOW} "$@"
+}
+
+function export_version_vars () {
+    PBR_VERSION=$(ci-tools/git-semver-pbr.sh)
+    RELEASE_GIT_VERSION=$(ci-tools/git-describe.sh)
+
+    if [ -z "${PBR_VERSION}" ] ; then
+        die "PBR_VERSION not set."
+    fi
+
+    if [ -z "${RELEASE_GIT_VERSION}" ] ; then
+        die "RELEASE_GIT_VERSION not set."
+    fi
+
+    export PBR_VERSION="${PBR_VERSION}"
+    export CAOS_COLLECTOR_RELEASE_GIT_VERSION="${RELEASE_GIT_VERSION}"
+}
+
+function docker_login () {
+    if [ "${DO_DOCKER_LOGIN}" == true ] ; then
+        say_yellow  "docker login to ${CI_REGISTRY}"
+        docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    fi
 }

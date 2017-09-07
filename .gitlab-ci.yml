@@ -26,7 +26,9 @@ image: python:2.7
 stages:
   - test
   - release
-  - docker
+  - docker-build
+  - docker-test
+  - docker-release
 
 variables: &variables
   CI_DEBUG_TRACE: "false"
@@ -58,7 +60,7 @@ pep8:
     - tox -e pep8
   allow_failure: true
 
-.release_template: &release_template
+release:
   stage: release
   variables:
     <<: *variables
@@ -66,56 +68,48 @@ pep8:
     - ci-tools/prepare.sh
   script:
     - ci-tools/release-build.sh
-
-release:build:
-  <<: *release_template
   artifacts:
     paths:
       - releases/caos_collector-$(ci-tools/git-semver-pbr.sh)-py2-none-any.whl
-    expire_in: 1 day
-  except:
-    - master
-
-release:master:
-  <<: *release_template
-  artifacts:
-    paths:
-      - releases/caos_collector-$(ci-tools/git-semver-pbr.sh)-py2-none-any.whl
-  only:
-    - master
 
 .docker_template: &docker_template
   image: docker:stable
-  stage: docker
   services:
     - docker:stable-dind
   tags:
     - docker-dind
   variables: &docker_template_variables
     <<: *variables
+    DO_DOCKER_LOGIN: "true"
   before_script:
     - docker info
     - apk add --no-cache bash git
-  script:
-    - ci-tools/docker-build.sh
 
-docker:build:
+docker-build:
   <<: *docker_template
-  variables:
-    <<: *docker_template_variables
-  dependencies:
-    - release:build
-  except:
-    - master
-    - tags
-
-docker:master:
-  <<: *docker_template
+  stage: docker-build
   variables:
     <<: *docker_template_variables
     DO_DOCKER_PUSH: "true"
   dependencies:
-    - release:master
+    - release
+  script:
+    - ci-tools/docker-build.sh
+
+docker-test:
+  <<: *docker_template
+  stage: docker-test
+  script:
+    - ci-tools/docker-test.sh
+
+docker-release:
+  <<: *docker_template
+  stage: docker-release
+  variables:
+    <<: *docker_template_variables
+    DO_DOCKER_PUSH: "true"
+  script:
+    - ci-tools/docker-release.sh
   only:
     - master
     - tags
