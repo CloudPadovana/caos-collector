@@ -48,7 +48,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
           python-pip \
           ipython
 
-      pip install --upgrade pip
+      pip install --upgrade pip wheel setuptools
       pip install tox
     SCRIPT
 
