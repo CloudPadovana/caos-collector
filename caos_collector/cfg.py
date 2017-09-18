@@ -186,9 +186,12 @@ def _get(name, default=None, required=True, check_type=None):
         raise RuntimeError("Required option `{name}` not found in config file."
                            .format(name=name))
 
-    if check_type and not type(value) is check_type:
-        raise RuntimeError("Option `{name}` must be a `{type}`"
-                           .format(name=name, type=check_type.__name__))
+    if check_type and value is not None:
+        try:
+            value = utils.convert(value, check_type.__name__)
+        except:
+            raise RuntimeError("Cannot convert option `{name}` to `{type}`"
+                               .format(name=name, type=check_type.__name__))
 
     return value
 
@@ -198,10 +201,7 @@ def _get_str(*args, **kwargs):
 
 
 def _get_int(*args, **kwargs):
-    value = _get(*args, check_type=int, **kwargs)
-    if value:
-        return int(value)
-    return None
+    return _get(*args, check_type=int, **kwargs)
 
 
 def _get_int_or_str(*args, **kwargs):

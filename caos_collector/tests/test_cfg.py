@@ -52,25 +52,28 @@ class TestCfg(unittest.TestCase):
             cfg.read("non_existent_file.yaml")
 
 
-    @mock.patch('caos_collector.cfg._config', {'int_var': 1, 'str_var': '2'})
+    @mock.patch('caos_collector.cfg._config', {'int_var': 1, 'str_int_var': '2', 'str_var': "str"})
     def test_get_int(self):
         value = cfg._get_int("int_var")
         self.assertIs(type(value), int)
         self.assertEqual(value, 1)
 
-        with self.assertRaisesRegexp(RuntimeError, "Option `str_var` must be a `int`"):
+        value = cfg._get_int("str_int_var")
+        self.assertIs(type(value), int)
+        self.assertEqual(value, 2)
+
+        with self.assertRaisesRegexp(RuntimeError, "Cannot convert option `str_var` to `int`"):
             cfg._get_int("str_var")
 
-    @mock.patch('caos_collector.cfg._config', {'int_var': 1, 'str_int_var': '2',
-                                               'str_var': "str"})
+    @mock.patch('caos_collector.cfg._config', {'int_var': 1, 'str_int_var': '2', 'str_var': "str"})
     def test_get_int_or_str(self):
         value = cfg._get_int_or_str("int_var")
         self.assertIs(type(value), int)
         self.assertEqual(value, 1)
 
         value = cfg._get_int_or_str("str_int_var")
-        self.assertIs(type(value), str)
-        self.assertEqual(value, '2')
+        self.assertIs(type(value), int)
+        self.assertEqual(value, 2)
 
         value = cfg._get_int_or_str("str_var")
         self.assertIs(type(value), str)
@@ -84,16 +87,16 @@ class TestCfg(unittest.TestCase):
         value = cfg._get_int("my_other_var", default=56, required=False)
         self.assertEqual(value, 56)
 
-        with self.assertRaisesRegexp(RuntimeError, "Option `my_other_var` must be a `int`"):
-            cfg._get_int("my_other_var", default='56', required=False)
+        with self.assertRaisesRegexp(RuntimeError, "Cannot convert option `my_other_var` to `int`"):
+            cfg._get_int("my_other_var", default='56a', required=False)
 
     @mock.patch('caos_collector.cfg._config', {'my_var': 23})
     def test_get_int_without_default(self):
         value = cfg._get_int("my_var", default=None, required=False)
         self.assertEqual(value, 23)
 
-        with self.assertRaisesRegexp(RuntimeError, "Option `my_other_var` must be a `int`"):
-            cfg._get_int("my_other_var", default=None, required=False)
+        value = cfg._get_int("my_other_var", default=None, required=False)
+        self.assertIsNone(value)
 
     @mock.patch('caos_collector.cfg._config', {'my_var': 23})
     def test_get_int_required_with_default(self):
@@ -103,8 +106,8 @@ class TestCfg(unittest.TestCase):
         value = cfg._get_int("my_other_var", default=56, required=True)
         self.assertEqual(value, 56)
 
-        with self.assertRaisesRegexp(RuntimeError, "Option `.*` must be a `int`"):
-            cfg._get_int("my_other_var", default='56', required=True)
+        with self.assertRaisesRegexp(RuntimeError, "Cannot convert option `.*` to `int`"):
+            cfg._get_int("my_other_var", default='56a', required=True)
 
     @mock.patch('caos_collector.cfg._config', {'my_var': 23})
     def test_get_int_required_without_default(self):
