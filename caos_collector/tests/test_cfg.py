@@ -116,3 +116,21 @@ class TestCfg(unittest.TestCase):
 
         with self.assertRaisesRegexp(RuntimeError, "Required option `.*` not found"):
             cfg._get_int("my_other_var", default=None, required=True)
+
+    @mock.patch('caos_collector.cfg._config', {'my_var': 23})
+    @mock.patch.dict('os.environ', {'MY_VAR': '108', 'MY_OTHER_VAR': '48'})
+    def test_get_int_from_env(self):
+        value = cfg._get_int("my_var", default=56, required=True, env_var='MY_VAR')
+        self.assertEqual(value, 23)
+
+        value = cfg._get_int("my_var", default=None, required=True, env_var='MY_VAR')
+        self.assertEqual(value, 23)
+
+        value = cfg._get_int("my_other_var", default=56, required=True, env_var='MY_OTHER_VAR')
+        self.assertEqual(value, 48)
+
+        value = cfg._get_int("my_other_var", default=None, required=True, env_var='MY_OTHER_VAR')
+        self.assertEqual(value, 48)
+
+        value = cfg._get_int("my_other_other_var", default=56, required=True, env_var='MY_OTHER_OTHER_VAR')
+        self.assertEqual(value, 56)

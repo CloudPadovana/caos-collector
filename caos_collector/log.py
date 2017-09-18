@@ -56,7 +56,7 @@ def _setup_logger(logger):
     ch.setFormatter(_formatter)
     logger.addHandler(ch)
 
-    ch = TimedRotatingFileHandler(cfg.LOGGER_LOG_PATH,
+    ch = TimedRotatingFileHandler(cfg.LOGGER_LOG_FILE_PATH,
                                   when='midnight',
                                   backupCount=cfg.LOGGER_ROTATE_KEEP_COUNT,
                                   utc=True)
@@ -64,7 +64,7 @@ def _setup_logger(logger):
     ch.setFormatter(_formatter)
     logger.addHandler(ch)
 
-    ch = TimedRotatingFileHandler(cfg.LOGGER_ERROR_LOG_PATH,
+    ch = TimedRotatingFileHandler(cfg.LOGGER_ERROR_FILE_PATH,
                                   when='midnight',
                                   backupCount=cfg.LOGGER_ROTATE_KEEP_COUNT,
                                   utc=True)
