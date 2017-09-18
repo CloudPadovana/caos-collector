@@ -1,38 +1,42 @@
 logger:
-  rotate_keep_count: 30
+  rotate_keep_count: 30 # ($CAOS_COLLECTOR_LOGGER_ROTATE_KEEP_COUNT)
 
-  log:
-    path: /var/log/caos/collector.log
-  error_log:
-    path: /var/log/caos/collector.error.log
+  log_file:
+    path: /var/log/caos/collector.log # ($CAOS_COLLECTOR_LOGGER_LOG_FILE_PATH)
+  error_file:
+    path: /var/log/caos/collector.error.log # ($CAOS_COLLECTOR_LOGGER_ERROR_FILE_PATH)
 
 
 keystone:
-  # username: OS_USERNAME
-  # password: OS_PASSWORD
-  # auth_url: OS_AUTH_URL
-  # project_id: OS_PROJECT_ID
-  # project_name: OS_PROJECT_NAME
-  # domain_id: OS_DOMAIN_ID
-  # domain_name: OS_DOMAIN_NAME
-  # user_domain_id: OS_USER_DOMAIN_ID
-  # user_domain_name: OS_USER_DOMAIN_NAME
-  # project_domain_id: OS_PROJECT_DOMAIN_ID
-  # project_domain_name: OS_PROJECT_DOMAIN_NAME
-  # cacert: OS_CACERT
-  # identity_api_version: v3
+  # username: OS_USERNAME ($OS_USERNAME)
+  # password: OS_PASSWORD ($OS_PASSWORD)
+  # auth_url: OS_AUTH_URL ($OS_AUTH_URL)
+  # project_id: OS_PROJECT_ID ($OS_PROJECT_ID)
+  # project_name: OS_PROJECT_NAME ($OS_PROJECT_NAME)
+  # domain_id: OS_DOMAIN_ID ($OS_DOMAIN_ID)
+  # domain_name: OS_DOMAIN_NAME ($OS_DOMAIN_NAME)
+  # user_domain_id: OS_USER_DOMAIN_ID ($OS_USER_DOMAIN_ID)
+  # user_domain_name: OS_USER_DOMAIN_NAME ($OS_USER_DOMAIN_NAME)
+  # project_domain_id: OS_PROJECT_DOMAIN_ID ($OS_PROJECT_DOMAIN_ID)
+  # project_domain_name: OS_PROJECT_DOMAIN_NAME ($OS_PROJECT_DOMAIN_NAME)
+  # cacert: OS_CACERT ($OS_CACERT)
+  # identity_api_version: v3 ($OS_IDENTITY_API_VERSION)
+
+
+openstack:
+  # nova_api_version: 2 ($OS_COMPUTE_API_VERSION)
 
 
 ceilometer:
-  # mongodb = mongodb://username:password@hostname1:port1,hostname2:port2/dbname
-  # polling_period: 600
-  # mongodb_connection_timeout: 1
+  # mongodb = mongodb://username:password@hostname1:port1,hostname2:port2/dbname ($CAOS_COLLECTOR_MONGODB)
+  # polling_period: 600 ($CAOS_COLLECTOR_MONGODB_CONNECTION_TIMEOUT)
+  # mongodb_connection_timeout: 1 ($CAOS_COLLECTOR_CEILOMETER_POLLING_PERIOD)
 
 
 caos-tsdb:
-  # api_url: http://localhost:4000/api/v1
-  # username: USERNAME
-  # password: PASSWORD
+  # api_url: http://localhost:4000/api/v1 ($CAOS_COLLECTOR_TSDB_API_URL)
+  # username: USERNAME ($CAOS_COLLECTOR_TSDB_USERNAME)
+  # password: PASSWORD ($CAOS_COLLECTOR_TSDB_PASSWORD)
 
 
 schedulers:

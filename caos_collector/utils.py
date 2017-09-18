@@ -54,6 +54,22 @@ def parse_date(date):
 
 
 # Based on
+# https://stackoverflow.com/questions/7402573/use-type-information-to-cast-values-stored-as-strings
+def convert(value, type_):
+    import importlib
+    try:
+        # Check if it's a builtin type
+        module = importlib.import_module('__builtin__')
+        cls = getattr(module, type_)
+    except AttributeError:
+        # if not, separate module and class
+        module, type_ = type_.rsplit(".", 1)
+        module = importlib.import_module(module)
+        cls = getattr(module, type_)
+    return cls(value)
+
+
+# Based on
 # https://stackoverflow.com/questions/25833613/python-safe-method-to-get-value-of-nested-dictionary
 def deep_get(obj, item, fallback=None):
     """Steps through an item chain to get the ultimate value.

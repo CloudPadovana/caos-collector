@@ -68,8 +68,8 @@ CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
 CEILOMETER_POLLING_PERIOD = None
 
 LOGGER_ROTATE_KEEP_COUNT = None
-LOGGER_LOG_PATH = None
-LOGGER_ERROR_LOG_PATH = None
+LOGGER_LOG_FILE_PATH = None
+LOGGER_ERROR_FILE_PATH = None
 
 OPENSTACK_NOVA_API_VERSION = None
 
@@ -78,8 +78,8 @@ DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 DEFAULT_KEYSTONE_API_VERSION = "v3"
 DEFAULT_OPENSTACK_NOVA_API_VERSION = "2"
 DEFAULT_LOGGER_ROTATE_KEEP_COUNT = 30
-DEFAULT_LOGGER_LOG_PATH = "/var/log/caos/collector.log"
-DEFAULT_LOGGER_ERROR_LOG_PATH = "/var/log/caos/collector.error.log"
+DEFAULT_LOGGER_LOG_FILE_PATH = "/var/log/caos/collector.log"
+DEFAULT_LOGGER_ERROR_FILE_PATH = "/var/log/caos/collector.error.log"
 
 # misc
 CAOS_DOMAIN_TAG_KEY = 'domain'
@@ -92,54 +92,112 @@ def _parse_cfg():
 
     _assign('LOGGER_ROTATE_KEEP_COUNT',
             _get_int("logger.rotate_keep_count",
+                     env_var="CAOS_COLLECTOR_LOGGER_ROTATE_KEEP_COUNT",
                      default=DEFAULT_LOGGER_ROTATE_KEEP_COUNT))
-    _assign('LOGGER_LOG_PATH',
-            _get_str("logger.log.path", default=DEFAULT_LOGGER_LOG_PATH))
-    _assign('LOGGER_ERROR_LOG_PATH',
-            _get_str("logger.error_log.path",
-                     default=DEFAULT_LOGGER_ERROR_LOG_PATH))
 
-    _assign('KEYSTONE_USERNAME', _get_str("keystone.username"))
-    _assign('KEYSTONE_PASSWORD', _get_str("keystone.password"))
-    _assign('KEYSTONE_AUTH_URL', _get_str("keystone.auth_url"))
-    _assign('KEYSTONE_PROJECT_ID', _get_str("keystone.project_id",
-                                            required=False))
-    _assign('KEYSTONE_PROJECT_NAME', _get_str("keystone.project_name",
-                                              required=False))
-    _assign('KEYSTONE_DOMAIN_ID', _get_str("keystone.domain_id",
-                                           required=False))
-    _assign('KEYSTONE_DOMAIN_NAME', _get_str("keystone.domain_name",
-                                             required=False))
-    _assign('KEYSTONE_USER_DOMAIN_ID', _get_str("keystone.user_domain_id",
-                                                required=False))
-    _assign('KEYSTONE_USER_DOMAIN_NAME', _get_str("keystone.user_domain_name",
-                                                  required=False))
-    _assign('KEYSTONE_PROJECT_DOMAIN_ID', _get_str("keystone.project_domain_id",
-                                                   required=False))
+    _assign('LOGGER_LOG_FILE_PATH',
+            _get_str("logger.log_file.path",
+                     env_var="CAOS_COLLECTOR_LOGGER_LOG_FILE_PATH",
+                     default=DEFAULT_LOGGER_LOG_FILE_PATH))
+
+    _assign('LOGGER_ERROR_FILE_PATH',
+            _get_str("logger.error_file.path",
+                     env_var="CAOS_COLLECTOR_LOGGER_ERROR_FILE_PATH",
+                     default=DEFAULT_LOGGER_ERROR_FILE_PATH))
+
+    _assign('KEYSTONE_USERNAME',
+            _get_str("keystone.username",
+                     env_var="OS_USERNAME"))
+
+    _assign('KEYSTONE_PASSWORD',
+            _get_str("keystone.password",
+                     env_var="OS_PASSWORD"))
+
+    _assign('KEYSTONE_AUTH_URL',
+            _get_str("keystone.auth_url",
+                     env_var="OS_AUTH_URL"))
+
+    _assign('KEYSTONE_PROJECT_ID',
+            _get_str("keystone.project_id",
+                     env_var="OS_PROJECT_ID",
+                     required=False))
+
+    _assign('KEYSTONE_PROJECT_NAME',
+            _get_str("keystone.project_name",
+                     env_var="OS_PROJECT_NAME",
+                     required=False))
+
+    _assign('KEYSTONE_DOMAIN_ID',
+            _get_str("keystone.domain_id",
+                     env_var="OS_DOMAIN_ID",
+                     required=False))
+
+    _assign('KEYSTONE_DOMAIN_NAME',
+            _get_str("keystone.domain_name",
+                     env_var="OS_DOMAIN_NAME",
+                     required=False))
+
+    _assign('KEYSTONE_USER_DOMAIN_ID',
+            _get_str("keystone.user_domain_id",
+                     env_var="OS_USER_DOMAIN_ID",
+                     required=False))
+
+    _assign('KEYSTONE_USER_DOMAIN_NAME',
+            _get_str("keystone.user_domain_name",
+                     env_var="OS_USER_DOMAIN_NAME",
+                     required=False))
+
+    _assign('KEYSTONE_PROJECT_DOMAIN_ID',
+            _get_str("keystone.project_domain_id",
+                     env_var="OS_PROJECT_DOMAIN_ID",
+                     required=False))
+
     _assign('KEYSTONE_PROJECT_DOMAIN_NAME',
             _get_str("keystone.project_domain_name",
+                     env_var="OS_PROJECT_DOMAIN_NAME",
                      required=False))
-    _assign('KEYSTONE_CACERT', _get_str("keystone.cacert"))
+
+    _assign('KEYSTONE_CACERT',
+            _get_str("keystone.cacert",
+                     env_var="OS_CACERT"))
+
     _assign('KEYSTONE_API_VERSION',
             _get_str("keystone.identity_api_version",
+                     env_var="OS_IDENTITY_API_VERSION",
                      default=DEFAULT_KEYSTONE_API_VERSION))
 
     # [openstack]
     _assign('OPENSTACK_NOVA_API_VERSION',
             _get_str("openstack.nova_api_version",
+                     env_var="OS_COMPUTE_API_VERSION",
                      default=DEFAULT_OPENSTACK_NOVA_API_VERSION))
 
     # [caos-tsdb]
-    _assign('CAOS_TSDB_API_URL', _get_str('caos-tsdb.api_url'))
-    _assign('CAOS_TSDB_API_USERNAME', _get_str('caos-tsdb.username'))
-    _assign('CAOS_TSDB_API_PASSWORD', _get_str('caos-tsdb.password'))
+    _assign('CAOS_TSDB_API_URL',
+            _get_str('caos-tsdb.api_url',
+                     env_var="CAOS_COLLECTOR_TSDB_API_URL"))
+
+    _assign('CAOS_TSDB_API_USERNAME',
+            _get_str('caos-tsdb.username',
+                     env_var="CAOS_COLLECTOR_TSDB_USERNAME"))
+
+    _assign('CAOS_TSDB_API_PASSWORD',
+            _get_str('caos-tsdb.password',
+                     env_var="CAOS_COLLECTOR_TSDB_PASSWORD"))
 
     # [ceilometer]
-    _assign('CEILOMETER_MONGODB', _get_str('ceilometer.mongodb'))
+    _assign('CEILOMETER_MONGODB',
+            _get_str('ceilometer.mongodb',
+                     env_var="CAOS_COLLECTOR_MONGODB"))
+
     _assign('CEILOMETER_MONGODB_CONNECTION_TIMEOUT',
             _get_int('ceilometer.mongodb_connection_timeout',
+                     env_var="CAOS_COLLECTOR_MONGODB_CONNECTION_TIMEOUT",
                      default=DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT))
-    _assign('CEILOMETER_POLLING_PERIOD', _get_int("ceilometer.polling_period"))
+
+    _assign('CEILOMETER_POLLING_PERIOD',
+            _get_int("ceilometer.polling_period",
+                     env_var="CAOS_COLLECTOR_CEILOMETER_POLLING_PERIOD"))
 
 
 def dump():
@@ -165,7 +223,7 @@ def read(cfg_file):
     logger.info("Reading configuration file: %s." % cfg_file)
 
     global _config
-    if _config:
+    if _config is not None:
         raise RuntimeError("cfg file already parsed")
 
     if not os.path.exists(cfg_file) or not os.path.isfile(cfg_file):
@@ -177,21 +235,24 @@ def read(cfg_file):
     _parse_cfg()
 
 
-def _get(name, default=None, required=True, check_type=None):
+def _get(name, default=None, required=True, check_type=None, env_var=None):
     value = utils.deep_get(_config, name)
 
+    if env_var and not value:
+        value = os.getenv(env_var, None)
+
+    value = value or default
+
     if required and not value:
-        if default:
-            return default
-        raise RuntimeError("No `{name}` in config file.".format(name=name))
+        raise RuntimeError("Required option `{name}` not found in config file."
+                           .format(name=name))
 
-    if not check_type or not value:
-        return value
-
-    # check type
-    if not type(value) is check_type:
-        raise RuntimeError("Option `{name}` must be a `{type}`"
-                           .format(name=name, type=check_type.__name__))
+    if check_type and value is not None:
+        try:
+            value = utils.convert(value, check_type.__name__)
+        except:
+            raise RuntimeError("Cannot convert option `{name}` to `{type}`"
+                               .format(name=name, type=check_type.__name__))
 
     return value
 
@@ -201,10 +262,7 @@ def _get_str(*args, **kwargs):
 
 
 def _get_int(*args, **kwargs):
-    value = _get(*args, check_type=int, **kwargs)
-    if value:
-        return int(value)
-    return None
+    return _get(*args, check_type=int, **kwargs)
 
 
 def _get_int_or_str(*args, **kwargs):

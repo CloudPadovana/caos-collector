@@ -43,3 +43,32 @@ class TestUtils(unittest.TestCase):
         x0 = 1484784000.0
         y0 = utils.interp(x, y, x0)
         self.assertEqual(y0, 228009946986404.9)
+
+    def test_convert(self):
+        cases = [
+            ("5", int, 5),
+            ("5", str, "5"),
+            ("5", float, 5.0),
+        ]
+
+        for case in cases:
+            src_value = case[0]
+            type_ = case[1]
+            dst_value = case[2]
+
+            value = utils.convert(src_value, type_.__name__)
+            self.assertEqual(value, dst_value)
+            self.assertIs(type(value), type_)
+
+    def test_convert_fails(self):
+        cases = [
+            ("5a", int),
+            ("5a", float),
+        ]
+
+        for case in cases:
+            src_value = case[0]
+            type_ = case[1]
+
+            with self.assertRaises(Exception):
+                value = utils.convert(src_value, type_.__name__)
