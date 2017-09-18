@@ -165,7 +165,7 @@ def read(cfg_file):
     logger.info("Reading configuration file: %s." % cfg_file)
 
     global _config
-    if _config:
+    if _config is not None:
         raise RuntimeError("cfg file already parsed")
 
     if not os.path.exists(cfg_file) or not os.path.isfile(cfg_file):
@@ -180,16 +180,13 @@ def read(cfg_file):
 def _get(name, default=None, required=True, check_type=None):
     value = utils.deep_get(_config, name)
 
+    value = value or default
+
     if required and not value:
-        if default:
-            return default
-        raise RuntimeError("No `{name}` in config file.".format(name=name))
+        raise RuntimeError("Required option `{name}` not found in config file."
+                           .format(name=name))
 
-    if not check_type or not value:
-        return value
-
-    # check type
-    if not type(value) is check_type:
+    if check_type and not type(value) is check_type:
         raise RuntimeError("Option `{name}` must be a `{type}`"
                            .format(name=name, type=check_type.__name__))
 
