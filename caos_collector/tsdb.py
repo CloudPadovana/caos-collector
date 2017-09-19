@@ -29,6 +29,7 @@ import json
 import re
 import requests
 import semver
+from uuid import uuid4
 
 import cfg
 import log
@@ -49,6 +50,8 @@ _REGEX = re.compile(
     (\.(?P<minor>(?:0|[1-9][0-9]*)))?
     $
     """, re.VERBOSE)
+
+_REQUEST_ID_HTTP_HEADER = 'x-request-id'
 
 
 class ConnectionError(Exception):
@@ -121,6 +124,16 @@ def check_version():
     return ret
 
 
+def generate_request_id():
+    return str(uuid4())
+
+
+def get_request_id(request):
+    if _REQUEST_ID_HTTP_HEADER in request.headers:
+        return request.headers[_REQUEST_ID_HTTP_HEADER]
+    return None
+
+
 def set_token(token):
     global _token
 
@@ -147,17 +160,26 @@ def refresh_token():
 def _request(rest_type, api, data=None, params=None):
     fun = getattr(requests, rest_type)
     url = "%s/%s" % (_caos_tsdb_api_url, api)
+    request_id = generate_request_id()
 
+    headers = {
+        _REQUEST_ID_HTTP_HEADER: request_id
+    }
+
+    logger.debug("[request_id={request_id}] {type} {url}, params={params}, json={json}"
+                 .format(request_id=request_id, type=rest_type, url=url,
+                         params=params, json=data))
     r = None
     try:
-        r = fun(url, json=data, params=params, auth=__jwt_auth)
+        r = fun(url, json=data, params=params, auth=__jwt_auth, headers=headers)
     except requests.exceptions.ConnectionError as e:
         raise ConnectionError(e)
 
-    logger.debug("REST request: {type} {url} params={params} json={json}"
-                 .format(type=rest_type, url=url, params=params, json=data))
     json = r.json()
-    logger.debug("REST status: %s json=%s", r.status_code, json)
+    logger.debug("[request_id={request_id}] status={status}, json={json}"
+                 .format(request_id=get_request_id(r),
+                         status=r.status_code,
+                         json=json))
 
     if r.ok and 'data' in json:
         return json['data']
