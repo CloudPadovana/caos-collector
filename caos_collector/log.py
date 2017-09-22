@@ -26,13 +26,17 @@
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
+import time
 
 from . import __package_name__
 import cfg
 
 
 _formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    '\n%(asctime)s [%(levelname)s] %(name)s %(message)s\n')
+
+# set to UTC
+_formatter.converter = time.gmtime
 
 
 def get_root_logger():
