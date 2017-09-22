@@ -76,18 +76,13 @@ __jwt_auth = JWTAuth()
 
 _caos_tsdb_api_url = None
 _token = None
-_graphql_endpoint = None
 
 
 def initialize():
     global _caos_tsdb_api_url
-    global _graphql_endpoint
 
     if not _caos_tsdb_api_url:
         _caos_tsdb_api_url = cfg.CAOS_TSDB_API_URL
-
-    if not _graphql_endpoint:
-        _graphql_endpoint = "%s/graphql" % _caos_tsdb_api_url
 
 
 def _check_version_rules(version, rules):
@@ -190,10 +185,6 @@ def get(api, params=None):
     return _request('get', api, params=params)
 
 
-def put(api, data):
-    return post(api, data, request='put')
-
-
 def post(api, data, request='post'):
     return _request(request, api, data)
 
@@ -208,7 +199,7 @@ def graphql(query, variables={}):
         logger.debug("GRAPHQL request: data=`{data}`, variables=`{variables}`"
                      .format(data=data, variables=variables))
 
-        r = requests.post(_graphql_endpoint, json=data, auth=__jwt_auth)
+        r = requests.post('graphql', json=data, auth=__jwt_auth)
         json = r.json()
 
         logger.debug("GRAPHQL response: {code} json=`{json}`"
