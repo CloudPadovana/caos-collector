@@ -63,3 +63,5 @@ ENV LANG=C.UTF-8
 
 # Based on https://github.com/moby/moby/issues/2569#issuecomment-27973910
 CMD ["/bin/sh", "-c", "env | grep '^LANG\\|_' >> /etc/environment && /usr/sbin/sshd -D"]
+
+ARG CAOS_COLLECTOR_FORCE_DOCKER_CACHE_MISS
