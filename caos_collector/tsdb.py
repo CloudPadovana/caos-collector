@@ -152,7 +152,7 @@ def refresh_token():
     return s
 
 
-def _request(rest_type, api, data=None, params=None):
+def _request(rest_type, api, data=None, params=None, return_data=True):
     fun = getattr(requests, rest_type)
     url = "%s/%s" % (_caos_tsdb_api_url, api)
     request_id = generate_request_id()
@@ -176,17 +176,21 @@ def _request(rest_type, api, data=None, params=None):
                          status=r.status_code,
                          json=json))
 
-    if r.ok and 'data' in json:
-        return json['data']
-    return r.ok
+    if return_data:
+        data = {}
+        if 'data' in json:
+            data = json['data']
+        return data
+    else:
+        return r
 
 
-def get(api, params=None):
-    return _request('get', api, params=params)
+def get(api, *args, **kwargs):
+    return _request(rest_type='get', api=api, *args, **kwargs)
 
 
-def post(api, data, request='post'):
-    return _request(request, api, data)
+def post(api, *args, **kwargs):
+    return _request(rest_type='post', api=api, *args, **kwargs)
 
 
 def graphql(query, variables={}):
@@ -195,25 +199,25 @@ def graphql(query, variables={}):
         'variables': variables
     }
 
-    try:
-        logger.debug("GRAPHQL request: data=`{data}`, variables=`{variables}`"
-                     .format(data=data, variables=variables))
+    logger.debug("GRAPHQL query={query}, variables={variables}"
+                 .format(query=query, variables=variables))
 
-        r = requests.post('graphql', json=data, auth=__jwt_auth)
-        json = r.json()
+    r = post('graphql', data=data, return_data=False)
+    json = r.json()
 
-        logger.debug("GRAPHQL response: {code} json=`{json}`"
-                     .format(code=r.status_code, json=json))
-
-    except requests.exceptions.ConnectionError as e:
-        raise ConnectionError(e)
-
-    if not r.ok:
-        raise GraphqlError(r)
+    logger.debug("GRAPHQL response: json={json}".format(json=json))
 
     if 'errors' in json:
-        raise GraphqlError("GRAPHQL errors: {errors}"
-                           .format(errors=json['errors']))
+        logger.error("GRAPHQL errors: {errors}"
+                     .format(errors=json['errors']))
+
+    if r.status_code != 200:
+        logger.warn("GRAPHQL response code: {code}".format(code=r.status_code))
+
+    if 'data' not in json:
+        logger.error("GRAPHQL response has no `data`: raising...")
+        raise GraphqlError("GRAPHQL response has no `data`: json={json}"
+                           .format(json=json))
 
     return json['data']
 

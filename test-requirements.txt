@@ -1,0 +1,5 @@
+coverage
+mock
+requests-mock
+testfixtures
+unittest2
