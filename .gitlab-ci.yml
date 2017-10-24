@@ -111,5 +111,4 @@ docker-release:
   script:
     - ci-tools/docker-release.sh
   only:
-    - master
     - tags

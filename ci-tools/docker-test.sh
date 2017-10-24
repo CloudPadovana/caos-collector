@@ -31,11 +31,9 @@ export_version_vars
 
 docker_login
 
-CAOS_COLLECTOR_DOCKER_IMAGE_TAG=${CI_REGISTRY_IMAGE}:${CAOS_COLLECTOR_RELEASE_GIT_VERSION}
-
 say_yellow  "Pulling docker container"
-docker pull ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG}-test
+docker pull ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG}
 
 say_yellow  "Running docker container"
 docker run --rm \
-       ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG}-test --help
+       ${CAOS_COLLECTOR_DOCKER_IMAGE_TAG} --help
