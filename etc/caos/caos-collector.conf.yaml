@@ -24,6 +24,7 @@ keystone:
 
 
 openstack:
+  # version: ocata ($CAOS_COLLECTOR_OPENSTACK_VERSION)
   # nova_api_version: 2 ($OS_COMPUTE_API_VERSION)
 
 

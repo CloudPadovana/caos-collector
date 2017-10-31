@@ -73,10 +73,13 @@ LOGGER_ERROR_FILE_PATH = None
 
 OPENSTACK_NOVA_API_VERSION = None
 
+OPENSTACK_VERSION = None
+
 # defaults
 DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 DEFAULT_KEYSTONE_API_VERSION = "v3"
 DEFAULT_OPENSTACK_NOVA_API_VERSION = "2"
+DEFAULT_OPENSTACK_VERSION = 'newton'
 DEFAULT_LOGGER_ROTATE_KEEP_COUNT = 30
 DEFAULT_LOGGER_LOG_FILE_PATH = "/var/log/caos/collector.log"
 DEFAULT_LOGGER_ERROR_FILE_PATH = "/var/log/caos/collector.error.log"
@@ -167,6 +170,11 @@ def _parse_cfg():
                      default=DEFAULT_KEYSTONE_API_VERSION))
 
     # [openstack]
+    _assign('OPENSTACK_VERSION',
+            _get_str("openstack.version",
+                     env_var="CAOS_COLLECTOR_OPENSTACK_VERSION",
+                     default=DEFAULT_OPENSTACK_VERSION))
+
     _assign('OPENSTACK_NOVA_API_VERSION',
             _get_str("openstack.nova_api_version",
                      env_var="OS_COMPUTE_API_VERSION",
