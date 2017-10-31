@@ -1,5 +1,5 @@
 coverage
 mock
+pytest
 requests-mock
 testfixtures
-unittest2
