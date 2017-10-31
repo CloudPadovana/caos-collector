@@ -333,3 +333,36 @@ class WallClockTimePollster(CeilometerPollster):
 
         ret = v2 - v1
         return ret
+
+
+class WallClockTimeOcataPollster(CeilometerPollster):
+    def __init__(self, *args, **kwargs):
+        super(WallClockTimeOcataPollster, self).__init__(*args, **kwargs)
+
+    def _counter_name(self):
+        return "vcpus"
+
+    def aggregate_resource(self, samples, key):
+        # see comments in CPUTimePollster.aggregate_resource()
+        if len(samples) < 2:
+            return None
+
+        v1 = self.interpolate_value(samples, timestamp=self.start, key=key)
+        v2 = self.interpolate_value(samples, timestamp=self.end, key=key)
+
+        # fake samples at start and end
+        s1 = samples[0]
+        s2 = samples[-1]
+        s1['timestamp'] = self.start
+        s1[key] = v1
+        s2['timestamp'] = self.end
+        s2[key] = v2
+
+        samples.insert(0, s1)
+        samples.append(s2)
+
+        # the integral
+        I = self.integrate_value(samples, key=key)
+
+        ret = I
+        return ret
