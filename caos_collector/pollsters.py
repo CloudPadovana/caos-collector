@@ -184,6 +184,15 @@ class CeilometerPollster(Pollster):
         value = self.aggregate_values(values)
         return value
 
+    def aggregate_resource(self, samples, key):
+        values = list(s[key] for s in samples)
+        value = sum(values)
+        return value
+
+    def aggregate_values(self, values):
+        value = sum(values)
+        return value
+
     @staticmethod
     def interpolate_value(samples, timestamp, key):
         epoch = utils.EPOCH
@@ -274,10 +283,6 @@ class CPUTimePollster(CeilometerPollster):
         ret = (v2 - v1) / 1e9
         return ret
 
-    def aggregate_values(self, values):
-        value = sum(values)
-        return value
-
 
 class WallClockTimePollster(CeilometerPollster):
     def __init__(self, *args, **kwargs):
@@ -328,7 +333,3 @@ class WallClockTimePollster(CeilometerPollster):
 
         ret = v2 - v1
         return ret
-
-    def aggregate_values(self, values):
-        value = sum(values)
-        return value
