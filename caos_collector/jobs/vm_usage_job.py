@@ -34,6 +34,7 @@ from caos_collector import tsdb
 from caos_collector import utils
 from caos_collector.pollsters import CPUTimePollster
 from caos_collector.pollsters import WallClockTimePollster
+from caos_collector.pollsters import WallClockTimeOcataPollster
 
 
 class VMUsageJob(Job):
@@ -318,10 +319,16 @@ class VMUsageJob(Job):
             "Checking wallclocktime time for project {id} from {s} to {e}"
             .format(id=project_id, name=project_id, s=start, e=end))
 
-        pollster = WallClockTimePollster(project_id=project_id,
-                                         period=period,
-                                         start=start,
-                                         end=end)
+        if cfg.OPENSTACK_VERSION < 'ocata':
+            pollster_class = WallClockTimePollster
+        else:
+            pollster_class = WallClockTimeOcataPollster
+
+        pollster = pollster_class(project_id=project_id,
+                                  period=period,
+                                  start=start,
+                                  end=end)
+
         sample = pollster.measure()
         if sample is None:
             self.logger.info("Skipping null wallclocktime time sample")

@@ -414,7 +414,7 @@ mutation($series: SeriesPrimary!, $timestamp: Datetime!, $value: Float!, $overwr
     }
 
     logger.info("Creating new sample for metric {metric}, period {period}, "
-                "tags {tags}, timestampe {timestamp}, value {value}, "
+                "tags {tags}, timestamp {timestamp}, value {value}, "
                 "overwrite {overwrite}"
                 .format(metric=metric_name,
                         period=period,
