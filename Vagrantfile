@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     tsdb.vm.provider :docker do |d|
       d.name = "caos-collector-tsdb"
       d.has_ssh = false
-      d.image = "baltig.infn.it:4567/chiarello/caos-tsdb:v0.1.3"
+      d.image = "baltig.infn.it:4567/caos/caos-tsdb:v0.1.4"
       d.create_args = [
         "-e", "CAOS_TSDB_DB_HOSTNAME=db",
         "-e", "CAOS_TSDB_DB_NAME=#{CAOS_DB_NAME}",
