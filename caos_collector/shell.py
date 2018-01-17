@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,7 +81,8 @@ def build_parser():
 
     subparsers = parser.add_subparsers(dest="job", help='job')
     subparsers.add_parser('daemon', help='daemon mode')
-    subparsers.add_parser('run', help='run scheduler')
+    subparsers.add_parser('run', help='run scheduler').add_argument(
+        'scheduler_name', metavar='NAME', help='Name of the scheduler')
 
     subparsers.required = False
 
@@ -181,7 +182,7 @@ def main():
         scheduler.main_loop()
 
     if job_name == 'run':
-        run_scheduler(job_name)
+        run_scheduler(args.scheduler_name)
         sys.exit(0)
 
     if job_name not in _JOBS:
