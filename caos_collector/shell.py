@@ -60,10 +60,10 @@ _JOBS = {
     'hypervisors_state': HypervisorsStateJob,
 }
 
-for job_name, job_class in _JOBS.items():
-    if not job_class.__doc__:
+for _job_name, _job_class in _JOBS.items():
+    if not _job_class.__doc__:
         raise NotImplementedError("Job `{job}` miss __doc__"
-                                  .format(job=job_class))
+                                  .format(job=_job_class))
 
 
 def build_parser():
@@ -99,13 +99,14 @@ def get_job_instance(name):
     return job_class()
 
 
-def run_job(cmdline):
+def job_partial(cmdline):
     parser = build_parser()
     args = parser.parse_args(shlex.split(cmdline))
     job_name = args.job
     job_instance = get_job_instance(job_name)
 
-    job_instance.run_job(args)
+    func = partial(job_instance.run_job, args)
+    return (func, job_name)
 
 
 def run_scheduler(scheduler_name):
@@ -117,7 +118,7 @@ def run_scheduler(scheduler_name):
     scheduler_cfg = cfg.SCHEDULERS[scheduler_name]
     jobs = scheduler_cfg['jobs']
     for cmdline in jobs:
-        func = partial(run_job, cmdline)
+        func, _ = job_partial(cmdline)
         logger.info("Running job {cmd_line} for scheduler {name}"
                     .format(name=scheduler_name, cmd_line=cmdline))
         func()
@@ -132,7 +133,7 @@ def setup_scheduler():
     for name, scheduler_cfg in schedulers.items():
         jobs = scheduler_cfg['jobs']
         for cmdline in jobs:
-            func = partial(run_job, cmdline)
+            func, job_name = job_partial(cmdline)
             cron_kwargs = scheduler_cfg['cron_kwargs']
 
             scheduler.add_job(func=func,
