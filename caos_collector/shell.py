@@ -99,13 +99,19 @@ def get_job_instance(name):
     return job_class()
 
 
+def job_run_partial(job_instance, cmdline):
+    parser = build_parser()
+    args = parser.parse_args(shlex.split(cmdline))
+    job_instance.run_job(args)
+
+
 def job_partial(cmdline):
     parser = build_parser()
     args = parser.parse_args(shlex.split(cmdline))
     job_name = args.job
     job_instance = get_job_instance(job_name)
 
-    func = partial(job_instance.run_job, args)
+    func = partial(job_run_partial, job_instance, cmdline)
     return (func, job_name)
 
 
