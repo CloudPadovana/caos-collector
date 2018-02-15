@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,6 +50,9 @@ class Job(object):
         raise NotImplementedError
 
     def run_job(self, args):
+        self.logger.info("Running job {name} with arguments: {args}"
+                         .format(name=self.name(), args=args))
+
         self._check_connectivity()
 
         ok = tsdb.refresh_token()
