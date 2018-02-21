@@ -63,6 +63,7 @@ CAOS_TSDB_API_URL = None
 CAOS_TSDB_API_USERNAME = None
 CAOS_TSDB_API_PASSWORD = None
 
+CEILOMETER_BACKEND = None
 CEILOMETER_MONGODB = None
 CEILOMETER_MONGODB_CONNECTION_TIMEOUT = None
 CEILOMETER_POLLING_PERIOD = None
@@ -79,6 +80,7 @@ OPENSTACK_PLACEMENT_ENDPOINT = None
 OPENSTACK_VERSION = None
 
 # defaults
+DEFAULT_CEILOMETER_BACKEND = "mongodb"
 DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 DEFAULT_KEYSTONE_API_VERSION = "v3"
 DEFAULT_OPENSTACK_NOVA_API_VERSION = "2"
@@ -211,14 +213,22 @@ def _parse_cfg():
                      env_var="CAOS_COLLECTOR_TSDB_PASSWORD"))
 
     # [ceilometer]
+    _assign('CEILOMETER_BACKEND',
+            _get_str("ceilometer.backend",
+                     env_var="CAOS_COLLECTOR_CEILOMETER_BACKEND",
+                     default=DEFAULT_CEILOMETER_BACKEND,
+                     required=False))
+
     _assign('CEILOMETER_MONGODB',
             _get_str('ceilometer.mongodb',
-                     env_var="CAOS_COLLECTOR_MONGODB"))
+                     env_var="CAOS_COLLECTOR_MONGODB",
+                     required=(CEILOMETER_BACKEND=='mongodb')))
 
     _assign('CEILOMETER_MONGODB_CONNECTION_TIMEOUT',
             _get_int('ceilometer.mongodb_connection_timeout',
                      env_var="CAOS_COLLECTOR_MONGODB_CONNECTION_TIMEOUT",
-                     default=DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT))
+                     default=DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT,
+                     required=False))
 
     _assign('CEILOMETER_POLLING_PERIOD',
             _get_int("ceilometer.polling_period",
