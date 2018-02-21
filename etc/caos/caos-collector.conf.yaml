@@ -36,6 +36,8 @@ ceilometer:
   # polling_period: 600 ($CAOS_COLLECTOR_CEILOMETER_POLLING_PERIOD)
   # mongodb = mongodb://username:password@hostname1:port1,hostname2:port2/dbname ($CAOS_COLLECTOR_MONGODB)
   # mongodb_connection_timeout: 1 ($CAOS_COLLECTOR_MONGODB_CONNECTION_TIMEOUT)
+  # gnocchi:
+  #   policy_granularity: 300 ($CAOS_COLLECTOR_CEILOMETER_GNOCCHI_POLICY_GRANULARITY)
 
 caos-tsdb:
   # api_url: http://localhost:4000/api/v1 ($CAOS_COLLECTOR_TSDB_API_URL)
