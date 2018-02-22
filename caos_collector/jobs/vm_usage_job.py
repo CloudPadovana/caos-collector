@@ -32,9 +32,9 @@ from caos_collector import metrics
 from caos_collector import openstack
 from caos_collector import tsdb
 from caos_collector import utils
-from caos_collector.pollsters import CPUTimePollster
-from caos_collector.pollsters import WallClockTimePollster
-from caos_collector.pollsters import WallClockTimeOcataPollster
+from caos_collector.pollsters import MongoCPUTimePollster
+from caos_collector.pollsters import MongoWallClockTimePollster
+from caos_collector.pollsters import MongoWallClockTimeOcataPollster
 
 
 class VMUsageJob(Job):
@@ -326,10 +326,11 @@ class VMUsageJob(Job):
             "Checking cpu time for project {id} from {s} to {e}"
             .format(id=project_id, name=project_id, s=start, e=end))
 
-        pollster = CPUTimePollster(project_id=project_id,
-                                   period=period,
-                                   start=start,
-                                   end=end)
+        pollster = MongoCPUTimePollster(
+            project_id=project_id,
+            period=period,
+            start=start,
+            end=end)
         sample = pollster.measure()
         if sample is None:
             self.logger.info("Skipping null cpu time sample")
@@ -353,9 +354,9 @@ class VMUsageJob(Job):
             .format(id=project_id, name=project_id, s=start, e=end))
 
         if cfg.OPENSTACK_VERSION < 'ocata':
-            pollster_class = WallClockTimePollster
+            pollster_class = MongoWallClockTimePollster
         else:
-            pollster_class = WallClockTimeOcataPollster
+            pollster_class = MongoWallClockTimeOcataPollster
 
         pollster = pollster_class(project_id=project_id,
                                   period=period,

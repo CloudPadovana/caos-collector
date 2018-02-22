@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,6 +64,59 @@ class CeilometerPollster(Pollster):
         self.counter_name = self._counter_name()
         self.ceilometer_polling_period = cfg.CEILOMETER_POLLING_PERIOD
 
+    def find_resources(self):
+        start = (self.start
+                 - datetime.timedelta(seconds=self.ceilometer_polling_period))
+        end = (self.end
+               + datetime.timedelta(seconds=self.ceilometer_polling_period))
+
+        resources = ceilometer.find_resources(project_id=self.project_id,
+                                              meter=self.counter_name,
+                                              start=start, end=end)
+        logger.debug("Project {id} has {n} resources of type {type} "
+                     "in the range from {start} to {end}"
+                     .format(id=self.project_id,
+                             n=len(resources),
+                             type=self.counter_name,
+                             start=start,
+                             end=end))
+        return resources
+
+    def aggregate_resource(self, samples, key):
+        values = list(s[key] for s in samples)
+        value = sum(values)
+        return value
+
+    def aggregate_values(self, values):
+        value = sum(values)
+        return value
+
+    @staticmethod
+    def interpolate_value(samples, timestamp, key):
+        epoch = utils.EPOCH
+
+        x = list((s['timestamp'] - epoch).total_seconds() for s in samples)
+        y = list(s[key] for s in samples)
+
+        x0 = (timestamp - epoch).total_seconds()
+        y0 = utils.interp(x, y, x0)
+        return y0
+
+    @staticmethod
+    def integrate_value(samples, key):
+        epoch = utils.EPOCH
+
+        x = list((s['timestamp'] - epoch).total_seconds() for s in samples)
+        y = list(s[key] for s in samples)
+
+        I = utils.integrate(x, y)
+        return I
+
+
+class MongoCeilometerPollster(CeilometerPollster):
+    def __init__(self, *args, **kwargs):
+        super(MongoCeilometerPollster, self).__init__(*args, **kwargs)
+
     def _counter_name(self):
         raise NotImplementedError
 
@@ -87,24 +140,6 @@ class CeilometerPollster(Pollster):
 
     def _samples_query(self):
         return []
-
-    def find_resources(self):
-        start = (self.start
-                 - datetime.timedelta(seconds=self.ceilometer_polling_period))
-        end = (self.end
-               + datetime.timedelta(seconds=self.ceilometer_polling_period))
-
-        resources = ceilometer.find_resources(project_id=self.project_id,
-                                              meter=self.counter_name,
-                                              start=start, end=end)
-        logger.debug("Project {id} has {n} resources of type {type} "
-                     "in the range from {start} to {end}"
-                     .format(id=self.project_id,
-                             n=len(resources),
-                             type=self.counter_name,
-                             start=start,
-                             end=end))
-        return resources
 
     def build_query(self, resources, timestamp_query):
         query_list = []
@@ -184,36 +219,6 @@ class CeilometerPollster(Pollster):
         value = self.aggregate_values(values)
         return value
 
-    def aggregate_resource(self, samples, key):
-        values = list(s[key] for s in samples)
-        value = sum(values)
-        return value
-
-    def aggregate_values(self, values):
-        value = sum(values)
-        return value
-
-    @staticmethod
-    def interpolate_value(samples, timestamp, key):
-        epoch = utils.EPOCH
-
-        x = list((s['timestamp'] - epoch).total_seconds() for s in samples)
-        y = list(s[key] for s in samples)
-
-        x0 = (timestamp - epoch).total_seconds()
-        y0 = utils.interp(x, y, x0)
-        return y0
-
-    @staticmethod
-    def integrate_value(samples, key):
-        epoch = utils.EPOCH
-
-        x = list((s['timestamp'] - epoch).total_seconds() for s in samples)
-        y = list(s[key] for s in samples)
-
-        I = utils.integrate(x, y)
-        return I
-
     @staticmethod
     def flatten_mongo_data(d):
         if type(d) is dict:
@@ -226,9 +231,9 @@ class CeilometerPollster(Pollster):
             raise RuntimeError("Don't know how to handle %s" % type(d))
 
 
-class CPUTimePollster(CeilometerPollster):
+class MongoCPUTimePollster(MongoCeilometerPollster):
     def __init__(self, *args, **kwargs):
-        super(CPUTimePollster, self).__init__(*args, **kwargs)
+        super(MongoCPUTimePollster, self).__init__(*args, **kwargs)
 
     def _counter_name(self):
         return "cpu"
@@ -284,9 +289,9 @@ class CPUTimePollster(CeilometerPollster):
         return ret
 
 
-class WallClockTimePollster(CeilometerPollster):
+class MongoWallClockTimePollster(MongoCeilometerPollster):
     def __init__(self, *args, **kwargs):
-        super(WallClockTimePollster, self).__init__(*args, **kwargs)
+        super(MongoWallClockTimePollster, self).__init__(*args, **kwargs)
 
     def _counter_name(self):
         return "instance"
@@ -335,9 +340,9 @@ class WallClockTimePollster(CeilometerPollster):
         return ret
 
 
-class WallClockTimeOcataPollster(CeilometerPollster):
+class MongoWallClockTimeOcataPollster(MongoCeilometerPollster):
     def __init__(self, *args, **kwargs):
-        super(WallClockTimeOcataPollster, self).__init__(*args, **kwargs)
+        super(MongoWallClockTimeOcataPollster, self).__init__(*args, **kwargs)
 
     def _counter_name(self):
         return "vcpus"
