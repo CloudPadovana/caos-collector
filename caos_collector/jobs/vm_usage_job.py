@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,6 +106,30 @@ class VMUsageJob(Job):
             default=False,
             help='Only update current period')
 
+        parser.add_argument(
+            '--no-cputime',
+            dest='no_cputime',
+            action='store_const',
+            const=True,
+            default=False,
+            help='Disable collection of CpuTime')
+
+        parser.add_argument(
+            '--no-wallclocktime',
+            dest='no_wallclocktime',
+            action='store_const',
+            const=True,
+            default=False,
+            help='Disable collection of WallClockTime')
+
+        parser.add_argument(
+            '--no-nova-usages',
+            dest='no_nova_usages',
+            action='store_const',
+            const=True,
+            default=False,
+            help='Disable collection of Nova Usages')
+
     def _run(self, args):
         domain_id = args.domain_id
         project_id = args.project_id
@@ -137,59 +161,68 @@ class VMUsageJob(Job):
             self.logger.info("Checking VM usages for project {id} ({name})"
                              .format(id=project_id, name=project_name))
 
-            grid = self._grid(start=start, end=end, period=period,
-                              current=args.current, misfire=False)
-            for ts in grid:
-                self.check_nova_usage(
-                    project_id=project_id,
+            if args.no_nova_usages:
+                self.logger.info("Nova Usages collection disabled by --no-nova-usages")
+            else:
+                grid = self._grid(start=start, end=end, period=period,
+                                  current=args.current, misfire=False)
+                for ts in grid:
+                    self.check_nova_usage(
+                        project_id=project_id,
+                        period=period,
+                        end=ts,
+                        start=ts - datetime.timedelta(seconds=period),
+                        overwrite=overwrite)
+
+            if args.no_cputime:
+                self.logger.info("CpuTime collection disabled by --no-cputime")
+            else:
+                last_timestamp = tsdb.last_timestamp(
+                    tags=[{'key': cfg.CAOS_PROJECT_TAG_KEY,
+                           'value': project_id}],
+                    metric_name=metrics.METRIC_VM_CPU_TIME_USAGE,
+                    period=period)
+
+                grid = self._grid(
+                    start=start,
+                    end=end,
                     period=period,
-                    end=ts,
-                    start=ts - datetime.timedelta(seconds=period),
-                    overwrite=overwrite)
+                    current=args.current,
+                    misfire=args.misfire,
+                    last_timestamp=last_timestamp)
 
-            last_timestamp = tsdb.last_timestamp(
-                tags=[{'key': cfg.CAOS_PROJECT_TAG_KEY,
-                       'value': project_id}],
-                metric_name=metrics.METRIC_VM_CPU_TIME_USAGE,
-                period=period)
+                for ts in grid:
+                    self.check_cpu_time(
+                        project_id=project_id,
+                        period=period,
+                        end=ts,
+                        start=ts - datetime.timedelta(seconds=period),
+                        overwrite=overwrite)
 
-            grid = self._grid(
-                start=start,
-                end=end,
-                period=period,
-                current=args.current,
-                misfire=args.misfire,
-                last_timestamp=last_timestamp)
+            if args.no_wallclocktime:
+                self.logger.info("WallClockTime collection disabled by --no-wallclocktime")
+            else:
+                last_timestamp = tsdb.last_timestamp(
+                    tags=[{'key': cfg.CAOS_PROJECT_TAG_KEY,
+                           'value': project_id}],
+                    metric_name=metrics.METRIC_VM_WALLCLOCK_TIME_USAGE,
+                    period=period)
 
-            for ts in grid:
-                self.check_cpu_time(
-                    project_id=project_id,
+                grid = self._grid(
+                    start=start,
+                    end=end,
                     period=period,
-                    end=ts,
-                    start=ts - datetime.timedelta(seconds=period),
-                    overwrite=overwrite)
+                    current=args.current,
+                    misfire=args.misfire,
+                    last_timestamp=last_timestamp)
 
-            last_timestamp = tsdb.last_timestamp(
-                tags=[{'key': cfg.CAOS_PROJECT_TAG_KEY,
-                       'value': project_id}],
-                metric_name=metrics.METRIC_VM_WALLCLOCK_TIME_USAGE,
-                period=period)
-
-            grid = self._grid(
-                start=start,
-                end=end,
-                period=period,
-                current=args.current,
-                misfire=args.misfire,
-                last_timestamp=last_timestamp)
-
-            for ts in grid:
-                self.check_wallckock_time(
-                    project_id=project_id,
-                    period=period,
-                    end=ts,
-                    start=ts - datetime.timedelta(seconds=period),
-                    overwrite=overwrite)
+                for ts in grid:
+                    self.check_wallckock_time(
+                        project_id=project_id,
+                        period=period,
+                        end=ts,
+                        start=ts - datetime.timedelta(seconds=period),
+                        overwrite=overwrite)
 
             self.logger.info("VM usages updated")
 
