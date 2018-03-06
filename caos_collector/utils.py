@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -89,6 +89,29 @@ def deep_get(obj, item, fallback=None):
         except (KeyError, TypeError):
             return fallback
     return reduce(getitem, item.split('.'), obj)
+
+
+# Based on
+# https://stackoverflow.com/questions/20656135/python-deep-merge-dictionary-data
+def mergedicts(dict1, dict2):
+    """Merges dict2 into dict1."""
+
+    for k in set(dict1.keys()).union(dict2.keys()):
+        if k in dict1 and k in dict2:
+            if isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
+                yield (k, dict(mergedicts(dict1[k], dict2[k])))
+            else:
+                # If one of the values is not a dict, you can't continue merging it.
+                # Value from second dict overrides one in first and we move on.
+                yield (k, dict2[k])
+        elif k in dict1:
+            yield (k, dict1[k])
+        else:
+            yield (k, dict2[k])
+
+
+def deep_merge(dict1, dict2):
+    return dict(mergedicts(dict1, dict2))
 
 
 def timeline(period, start=EPOCH, end=datetime.datetime.utcnow()):

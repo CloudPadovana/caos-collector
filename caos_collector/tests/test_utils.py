@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,3 +72,25 @@ class TestUtils(unittest.TestCase):
 
             with self.assertRaises(Exception):
                 value = utils.convert(src_value, type_.__name__)
+
+    def test_deep_merge(self):
+        a = {
+            1: {"a": "A"},
+            2: {"b": "B"},
+            'c': 3,
+        }
+        b = {
+            'c': 7,
+            2: {"c": "C"},
+            3: {"d": "D"},
+        }
+
+        expected = {
+            1: {"a": "A"},
+            'c': 7,
+            2: {"b": "B", "c": "C"},
+            3: {"d": "D"},
+        }
+
+        value = utils.deep_merge(a, b)
+        self.assertEqual(value, expected)

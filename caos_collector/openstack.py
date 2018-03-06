@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ from novaclient import exceptions as nova_client_exceptions
 
 import cfg
 import log
+from placement import PlacementSessionClient
 
 
 logger = log.get_logger(__name__)
@@ -81,6 +82,18 @@ def get_nova_client():
                                   version=cfg.OPENSTACK_NOVA_API_VERSION)
         return nova
     except nova_client_exceptions.ClientException as e:
+        raise OpenstackError(e)
+
+
+def get_placement_client():
+    try:
+        placement = PlacementSessionClient(
+            session=_keystone_session,
+            version=cfg.OPENSTACK_PLACEMENT_API_VERSION,
+        )
+
+        return placement
+    except Exception as e:
         raise OpenstackError(e)
 
 

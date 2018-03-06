@@ -27,6 +27,9 @@ openstack:
   # version: ocata ($CAOS_COLLECTOR_OPENSTACK_VERSION)
   # nova_api_version: 2 ($OS_COMPUTE_API_VERSION)
 
+  # placement:
+  #   api_version: '1.0' ($OS_PLACEMENT_API_VERSION)
+  #   endpoint: http://localhost:8778 ($CAOS_COLLECTOR_PLACEMENT_ENDPOINT)
 
 ceilometer:
   # mongodb = mongodb://username:password@hostname1:port1,hostname2:port2/dbname ($CAOS_COLLECTOR_MONGODB)

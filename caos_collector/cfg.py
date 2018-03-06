@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2016, 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2016, 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,12 +73,17 @@ LOGGER_ERROR_FILE_PATH = None
 
 OPENSTACK_NOVA_API_VERSION = None
 
+OPENSTACK_PLACEMENT_API_VERSION = None
+OPENSTACK_PLACEMENT_ENDPOINT = None
+
 OPENSTACK_VERSION = None
 
 # defaults
 DEFAULT_CEILOMETER_MONGODB_CONNECTION_TIMEOUT = 1
 DEFAULT_KEYSTONE_API_VERSION = "v3"
 DEFAULT_OPENSTACK_NOVA_API_VERSION = "2"
+DEFAULT_OPENSTACK_PLACEMENT_API_VERSION = "1.4"
+DEFAULT_OPENSTACK_PLACEMENT_ENDPOINT = None
 DEFAULT_OPENSTACK_VERSION = 'newton'
 DEFAULT_LOGGER_ROTATE_KEEP_COUNT = 30
 DEFAULT_LOGGER_LOG_FILE_PATH = "/var/log/caos/collector.log"
@@ -174,6 +179,18 @@ def _parse_cfg():
             _get_str("openstack.version",
                      env_var="CAOS_COLLECTOR_OPENSTACK_VERSION",
                      default=DEFAULT_OPENSTACK_VERSION))
+
+    _assign('OPENSTACK_PLACEMENT_API_VERSION',
+            _get_str("openstack.placement.api_version",
+                     env_var="OS_PLACEMENT_API_VERSION",
+                     required=False,
+                     default=DEFAULT_OPENSTACK_PLACEMENT_API_VERSION))
+
+    _assign('OPENSTACK_PLACEMENT_ENDPOINT',
+            _get_str("openstack.placement.endpoint",
+                     env_var="CAOS_COLLECTOR_PLACEMENT_ENDPOINT",
+                     required=False,
+                     default=DEFAULT_OPENSTACK_PLACEMENT_ENDPOINT))
 
     _assign('OPENSTACK_NOVA_API_VERSION',
             _get_str("openstack.nova_api_version",

@@ -10,3 +10,5 @@ semver ~= 2.7
 
 python-keystoneclient ~= 3.10
 python-novaclient ~= 9.0
+
+osc-lib ~= 1.9.0
