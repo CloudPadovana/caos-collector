@@ -5,7 +5,7 @@
 #
 # caos-collector - CAOS collector
 #
-# Copyright © 2017 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
+# Copyright © 2017, 2018 INFN - Istituto Nazionale di Fisica Nucleare (Italy)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,9 +75,11 @@ class HypervisorsStateJob(Job):
     def _run(self, args):
         tz = datetime.datetime.utcnow()
 
-        ar = _DEFAULT_ALLOCATION_RATIO.copy()
+        ar = utils.deep_merge({}, _DEFAULT_ALLOCATION_RATIO)
+
+        # merge with values given on command-line
         if args.allocation_ratio:
-            ar.update(args.allocation_ratio)
+            ar = utils.deep_merge(ar, args.allocation_ratio)
 
         # get hypervisors from nova
         hypervisors = openstack.hypervisors(detailed=True)
