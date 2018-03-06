@@ -72,10 +72,26 @@ class HypervisorsStateJob(Job):
             type=yaml.load,
             help='Allocation ratios')
 
+        parser.add_argument(
+            '-n', '--no-placement',
+            dest='no_placement',
+            action='store_const',
+            const=True,
+            default=False,
+            help='Don\'t query placement api (ocata and above)')
+
     def _run(self, args):
         tz = datetime.datetime.utcnow()
 
         ar = utils.deep_merge({}, _DEFAULT_ALLOCATION_RATIO)
+
+        # query placement api if available and not disabled
+        if cfg.OPENSTACK_VERSION >= 'ocata' and not args.no_placement:
+            self.logger.info("Querying allocation ratios from placement API")
+            placement_ar = self._query_ar_from_placement()
+            self.logger.info("Allocation ratios from placement API: {ar}".format(
+                ar=placement_ar))
+            ar = utils.deep_merge(ar, placement_ar)
 
         # merge with values given on command-line
         if args.allocation_ratio:
@@ -102,6 +118,27 @@ class HypervisorsStateJob(Job):
                                   cpu_ar=cpu_ar, ram_ar=ram_ar)
 
         self.logger.info("Hypervisors state updated")
+
+    def _query_ar_from_placement(self):
+        ar = {
+            'cpu': {},
+            'ram': {},
+        }
+
+        placement = openstack.get_placement_client()
+
+        providers = placement.resource_providers()
+        for p in providers:
+            uuid = p['uuid']
+            name = p['name']
+
+            cpu_inventory = placement.inventory(uuid, 'VCPU')
+            ram_inventory = placement.inventory(uuid, 'MEMORY_MB')
+
+            ar['cpu'][name] = cpu_inventory['allocation_ratio']
+            ar['ram'][name] = ram_inventory['allocation_ratio']
+
+        return ar
 
     def _get_allocation_ratio(self, arg, cpu_or_ram, hypervisor):
         map = arg[cpu_or_ram]
