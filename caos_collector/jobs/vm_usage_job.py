@@ -35,6 +35,8 @@ from caos_collector import utils
 from caos_collector.pollsters import MongoCPUTimePollster
 from caos_collector.pollsters import MongoWallClockTimePollster
 from caos_collector.pollsters import MongoWallClockTimeOcataPollster
+from caos_collector.pollsters import GnocchiCPUTimePollster
+from caos_collector.pollsters import GnocchiWallClockTimeOcataPollster
 
 
 class VMUsageJob(Job):
@@ -326,7 +328,12 @@ class VMUsageJob(Job):
             "Checking cpu time for project {id} from {s} to {e}"
             .format(id=project_id, name=project_id, s=start, e=end))
 
-        pollster = MongoCPUTimePollster(
+        if cfg.CEILOMETER_BACKEND == 'gnocchi':
+            pollster_class = GnocchiCPUTimePollster
+        elif cfg.CEILOMETER_BACKEND == 'mongodb':
+            pollster_class = MongoCPUTimePollster
+
+        pollster = pollster_class(
             project_id=project_id,
             period=period,
             start=start,
@@ -356,7 +363,10 @@ class VMUsageJob(Job):
         if cfg.OPENSTACK_VERSION < 'ocata':
             pollster_class = MongoWallClockTimePollster
         else:
-            pollster_class = MongoWallClockTimeOcataPollster
+            if cfg.CEILOMETER_BACKEND == 'gnocchi':
+                pollster_class = GnocchiWallClockTimeOcataPollster
+            elif cfg.CEILOMETER_BACKEND == 'mongodb':
+                pollster_class = MongoWallClockTimeOcataPollster
 
         pollster = pollster_class(project_id=project_id,
                                   period=period,

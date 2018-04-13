@@ -29,6 +29,8 @@ from bson import SON
 
 import cfg
 import log
+import openstack
+import utils
 
 
 logger = log.get_logger(__name__)
@@ -146,12 +148,71 @@ class MongoCeilometerBackend(CeilometerBackend):
         return ret
 
 
+class GnocchiCeilometerBackend(CeilometerBackend):
+    _gnocchi = None
+
+    def __init__(self, *args, **kwargs):
+        super(GnocchiCeilometerBackend, self).__init__(
+            name=__name__, *args, **kwargs)
+
+    def initialize(self):
+        try:
+            self._gnocchi = openstack.get_gnocchi_client()
+            gnocchi_status = self._gnocchi.status.get()
+        except openstack.OpenstackError as e:
+            raise ConnectionError(e)
+
+        self.logger.debug(gnocchi_status)
+
+    def disconnect(self):
+        pass
+
+    def find_resources(self, project_id, meter, start=None, end=None):
+        query_list = [
+            {"=": {"project_id": project_id}},
+        ]
+
+        if end is not None:
+            query_list.append(
+                {"or": [
+                    {"gt": {"revision_end": utils.format_date(end)}},
+                    {"=": {"revision_end": None}},
+                ]})
+
+        if start is not None:
+            query_list.append(
+                {"or": [
+                    {"lt": {"revision_start": utils.format_date(start)}},
+                    {"=": {"revision_start": None}},
+                ]})
+
+        query = {"and": query_list}
+        resources = self._gnocchi.resource.search(
+            resource_type="instance",
+            details=True,
+            history=True,
+            query=query,
+        )
+
+        self.logger.debug("Got %d resources" % len(resources))
+        ret = []
+        for r in resources:
+            if meter in r['metrics']:
+                ret.append(r['id'])
+        return ret
+
+    def find(self, *args, **kwargs):
+        return self._gnocchi.metric.get_measures(*args, **kwargs)
+
+
 def initialize():
     global _ceilometer_backend
     backend = cfg.CEILOMETER_BACKEND
 
     if backend == 'mongodb':
         _ceilometer_backend = MongoCeilometerBackend()
+    elif backend == 'gnocchi':
+        _ceilometer_backend = GnocchiCeilometerBackend()
     else:
         logger.error("Unknown ceilometer backend: {name}."
                      .format(name=backend))

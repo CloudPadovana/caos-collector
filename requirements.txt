@@ -4,6 +4,7 @@ pbr
 apscheduler ~= 3.3
 numpy ~= 1.12
 pymongo ~= 3.5.1
+gnocchiclient ~= 7.0.1
 PyYAML ~= 3.12
 requests ~= 2.12
 semver ~= 2.7

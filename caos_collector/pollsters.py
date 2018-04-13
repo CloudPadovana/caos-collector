@@ -371,3 +371,94 @@ class MongoWallClockTimeOcataPollster(MongoCeilometerPollster):
 
         ret = I
         return ret
+
+
+class GnocchiCeilometerPollster(CeilometerPollster):
+    def __init__(self, *args, **kwargs):
+        super(GnocchiCeilometerPollster, self).__init__(*args, **kwargs)
+
+    def measure(self):
+        resources = self.find_resources()
+
+        values = []
+        for resource_id in resources:
+            logger.debug("Aggregating resource {id}"
+                         .format(id=resource_id))
+
+            # To capture a proper value, we need to query the values
+            # between time 'start' and 'end', plus a margin given by
+            # ceilometer_polling_period. Then we interpolate according to
+            # our period.
+            raw_samples = ceilometer.find(
+                metric=self.counter_name,
+                start=self.start - datetime.timedelta(seconds=self.ceilometer_polling_period),
+                stop=self.end + datetime.timedelta(seconds=self.ceilometer_polling_period),
+                granularity=cfg.CEILOMETER_GNOCCHI_POLICY_GRANULARITY,
+                resource_id=resource_id)
+
+            samples = []
+            for s in raw_samples:
+                samples.append({
+                    'timestamp': s[0].replace(tzinfo=None),
+                    'value': s[2],
+                })
+
+            v = self.aggregate_resource(samples, key='value')
+            if v is None:
+                logger.debug("Missing data for resource {id}"
+                             .format(id=resource_id))
+                continue
+
+            values.append(v)
+
+        if not len(values):
+            return None
+
+        value = self.aggregate_values(values)
+        return value
+
+    def aggregate_resource(self, samples, key):
+        if len(samples) < 2:
+            return None
+
+        v1 = self.interpolate_value(samples, timestamp=self.start, key=key)
+        v2 = self.interpolate_value(samples, timestamp=self.end, key=key)
+
+        # fake samples at start and end
+        s1 = samples[0]
+        s2 = samples[-1]
+        s1['timestamp'] = self.start
+        s1[key] = v1
+        s2['timestamp'] = self.end
+        s2[key] = v2
+
+        samples.insert(0, s1)
+        samples.append(s2)
+
+        # the integral
+        I = self.integrate_value(samples, key=key)
+
+        ret = I
+        return ret
+
+
+class GnocchiCPUTimePollster(GnocchiCeilometerPollster):
+    def __init__(self, *args, **kwargs):
+        super(GnocchiCPUTimePollster, self).__init__(*args, **kwargs)
+
+    def _counter_name(self):
+        return "cpu.delta"
+
+    def aggregate_resource(self, *args, **kwargs):
+        value = super(GnocchiCPUTimePollster, self).aggregate_resource(*args, **kwargs)
+        if value is not None:
+            value = value / 1e9 / (self.end - self.start).total_seconds()
+        return value
+
+
+class GnocchiWallClockTimeOcataPollster(GnocchiCeilometerPollster):
+    def __init__(self, *args, **kwargs):
+        super(GnocchiWallClockTimeOcataPollster, self).__init__(*args, **kwargs)
+
+    def _counter_name(self):
+        return "vcpus"
