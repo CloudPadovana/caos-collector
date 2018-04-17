@@ -202,7 +202,7 @@ class GnocchiCeilometerBackend(CeilometerBackend):
         return ret
 
     def find(self, *args, **kwargs):
-        return self._gnocchi.metric.get_measures(*args, **kwargs)
+        return self._gnocchi.metric.aggregation(*args, **kwargs)
 
 
 def initialize():

@@ -112,6 +112,31 @@ class CeilometerPollster(Pollster):
         I = utils.integrate(x, y)
         return I
 
+    @staticmethod
+    def correct_monotonicity(items, key):
+        # From the information we have, we just check if some value is
+        # less than its predecessor. In this case we add a delta (also
+        # to all the following values).
+        delta = 0
+        ret = []
+
+        i0 = items[0]
+        v0 = i0[key]
+        ret.append(i0)
+        for i in items[1:]:
+            v = i[key]
+            if v < v0:
+                logger.debug("Correcting monotonicity: %s, %d < %s, %d",
+                             i, v, i0, v0)
+                # all the subsequent items will get the same correction
+                delta += abs(v - v0)
+
+            i[key] = v + delta
+            ret.append(i)
+            i0 = i
+            v0 = v
+        return ret
+
 
 class MongoCeilometerPollster(CeilometerPollster):
     def __init__(self, *args, **kwargs):
@@ -238,30 +263,6 @@ class MongoCPUTimePollster(MongoCeilometerPollster):
     def _counter_name(self):
         return "cpu"
 
-    def correct_monotonicity(self, items, key):
-        # From the information we have, we just check if some value is
-        # less than its predecessor. In this case we add a delta (also
-        # to all the following values).
-        delta = 0
-        ret = []
-
-        i0 = items[0]
-        v0 = i0[key]
-        ret.append(i0)
-        for i in items[1:]:
-            v = i[key]
-            if v < v0:
-                logger.debug("Correcting monotonicity: %s, %d < %s, %d",
-                             i, v, i0, v0)
-                # all the subsequent items will get the same correction
-                delta += abs(v - v0)
-
-            i[key] = v + delta
-            ret.append(i)
-            i0 = i
-            v0 = v
-        return ret
-
     def aggregate_resource(self, samples, key):
         # At this point, due to the way ceilometer stores information
         # about resources (even after find_resources()), data could be
@@ -378,31 +379,41 @@ class GnocchiCeilometerPollster(CeilometerPollster):
         super(GnocchiCeilometerPollster, self).__init__(*args, **kwargs)
 
     def measure(self):
-        resources = self.find_resources()
+        # To capture a proper value, we need to query the values
+        # between time 'start' and 'end', plus a margin given by
+        # ceilometer_polling_period. Then we interpolate according to
+        # our period.
+        raw_grouped_samples = ceilometer.find(
+            resource_type="instance",
+            metrics=self.counter_name,
+            start=self.start - datetime.timedelta(seconds=self.ceilometer_polling_period),
+            stop=self.end + datetime.timedelta(seconds=self.ceilometer_polling_period),
+            granularity=cfg.CEILOMETER_GNOCCHI_POLICY_GRANULARITY,
+            groupby="id",
+            query={"=": {"project_id": self.project_id}},
+        )
+
+        grouped_samples = {}
+        for g in raw_grouped_samples:
+            resource_id = g['group']['id']
+            if not resource_id in grouped_samples:
+                grouped_samples[resource_id] = []
+
+            for s in g['measures']:
+                grouped_samples[resource_id].append({
+                    'timestamp': s[0].replace(tzinfo=None),
+                    'value': s[2],
+                })
+
+        resources = grouped_samples.keys()
+        logger.debug("Got %d resources" % len(resources))
 
         values = []
         for resource_id in resources:
             logger.debug("Aggregating resource {id}"
                          .format(id=resource_id))
 
-            # To capture a proper value, we need to query the values
-            # between time 'start' and 'end', plus a margin given by
-            # ceilometer_polling_period. Then we interpolate according to
-            # our period.
-            raw_samples = ceilometer.find(
-                metric=self.counter_name,
-                start=self.start - datetime.timedelta(seconds=self.ceilometer_polling_period),
-                stop=self.end + datetime.timedelta(seconds=self.ceilometer_polling_period),
-                granularity=cfg.CEILOMETER_GNOCCHI_POLICY_GRANULARITY,
-                resource_id=resource_id)
-
-            samples = []
-            for s in raw_samples:
-                samples.append({
-                    'timestamp': s[0].replace(tzinfo=None),
-                    'value': s[2],
-                })
-
+            samples = grouped_samples[resource_id]
             v = self.aggregate_resource(samples, key='value')
             if v is None:
                 logger.debug("Missing data for resource {id}"
@@ -447,14 +458,19 @@ class GnocchiCPUTimePollster(GnocchiCeilometerPollster):
         super(GnocchiCPUTimePollster, self).__init__(*args, **kwargs)
 
     def _counter_name(self):
-        return "cpu.delta"
+        return "cpu"
 
-    def aggregate_resource(self, *args, **kwargs):
-        value = super(GnocchiCPUTimePollster, self).aggregate_resource(*args, **kwargs)
-        if value is not None:
-            value = value / 1e9 / (self.end - self.start).total_seconds()
-        return value
+    def aggregate_resource(self, samples, key):
+        if len(samples) < 2:
+            return None
 
+        samples = self.correct_monotonicity(samples, key=key)
+
+        v1 = self.interpolate_value(samples, timestamp=self.start, key=key)
+        v2 = self.interpolate_value(samples, timestamp=self.end, key=key)
+
+        ret = (v2 - v1) / 1e9
+        return ret
 
 class GnocchiWallClockTimeOcataPollster(GnocchiCeilometerPollster):
     def __init__(self, *args, **kwargs):
