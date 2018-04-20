@@ -379,6 +379,21 @@ class GnocchiCeilometerPollster(CeilometerPollster):
         super(GnocchiCeilometerPollster, self).__init__(*args, **kwargs)
 
     def measure(self):
+        start = self.start - datetime.timedelta(seconds=self.ceilometer_polling_period)
+        stop = self.end + datetime.timedelta(seconds=self.ceilometer_polling_period)
+
+        query = {"and": [
+            {"=": {"project_id": self.project_id}},
+            {"or": [
+                {"==": {"ended_at": None}},
+                {">=": {"ended_at": start}},
+            ]},
+            {"or": [
+                {"==": {"started_at": None}},
+                {"<=": {"started_at": stop}},
+            ]},
+        ]}
+
         # To capture a proper value, we need to query the values
         # between time 'start' and 'end', plus a margin given by
         # ceilometer_polling_period. Then we interpolate according to
@@ -386,11 +401,11 @@ class GnocchiCeilometerPollster(CeilometerPollster):
         raw_grouped_samples = ceilometer.find(
             resource_type="instance",
             metrics=self.counter_name,
-            start=self.start - datetime.timedelta(seconds=self.ceilometer_polling_period),
-            stop=self.end + datetime.timedelta(seconds=self.ceilometer_polling_period),
+            start=start,
+            stop=stop,
             granularity=cfg.CEILOMETER_GNOCCHI_POLICY_GRANULARITY,
             groupby="id",
-            query={"=": {"project_id": self.project_id}},
+            query=query,
         )
 
         grouped_samples = {}
