@@ -30,6 +30,8 @@ from keystoneclient import client as keystone_client
 from keystoneclient import exceptions as keystone_client_exceptions
 from novaclient import client as nova_client
 from novaclient import exceptions as nova_client_exceptions
+from gnocchiclient import client as gnocchi_client
+from gnocchiclient import exceptions as gnocchi_client_exceptions
 
 import cfg
 import log
@@ -94,6 +96,16 @@ def get_placement_client():
 
         return placement
     except Exception as e:
+        raise OpenstackError(e)
+
+
+def get_gnocchi_client():
+    try:
+        gnocchi = gnocchi_client.Client(
+            session=_keystone_session,
+            version=1)
+        return gnocchi
+    except gnocchi_client_exceptions.ClientException as e:
         raise OpenstackError(e)
 
 
